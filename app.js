@@ -1,88 +1,66 @@
-// app.js - Logik Teras FamiliPintar
+// ==========================================
+// app.js - Logik Teras FamiliPintar (VERSI 3 MUKTAMAD)
+// ==========================================
 
-
-// 1. Import Modul Firebase (Gunakan pautan CDN untuk MVP HTML pantas)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 2. Konfigurasi Firebase Anda (Dapatkan ini di Firebase Console -> Project Settings)
 const firebaseConfig = {
-  apiKey: "AIzaSyA7SW4U--evGtfRyPz5Feh3mEN8MF92gTg",
-  authDomain: "familipintar.firebaseapp.com",
-  databaseURL: "https://familipintar-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "familipintar",
-  storageBucket: "familipintar.firebasestorage.app",
-  messagingSenderId: "277029764059",
-  appId: "1:277029764059:web:0a21bb2e01d868b1ed05fe",
-  measurementId: "G-S3RP7E4460"
+    apiKey: "AIzaSyA7SW4U--evGtfRyPz5Feh3mEN8MF92gTg",
+    authDomain: "familipintar.firebaseapp.com",
+    databaseURL: "https://familipintar-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "familipintar",
+    storageBucket: "familipintar.firebasestorage.app",
+    messagingSenderId: "277029764059",
+    appId: "1:277029764059:web:0a21bb2e01d868b1ed05fe",
+    measurementId: "G-S3RP7E4460"
 };
 
-// 3. Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
 let penggunaSemasa = null;
 
-// ==========================================
-// PENGURUSAN SESI (AUTH STATE)
-// ==========================================
+// --- 1. PENGURUSAN SESI ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
-
-        // --- TAMBAH DUA BARIS INI ---
         const welcomeElement = document.getElementById('welcomeScreen');
         if (welcomeElement) welcomeElement.style.display = 'none'; 
-        // ----------------------------
-
-        // ---> TAMBAH BARIS INI JUGA (Sembunyikan modal jika terbuka) <---
+        
         const authModalElement = document.getElementById('authModal');
         if (authModalElement) authModalElement.style.display = 'none';
-      
-        // Dapatkan data profil dan baki kredit dari Firestore
+        
         const refPengguna = doc(db, "mynasab_users", user.uid);
         const snapPengguna = await getDoc(refPengguna);
 
         if (snapPengguna.exists()) {
             const dataPengguna = snapPengguna.data();
-            // Kemas kini UI di top-bar
             document.getElementById('creditBalance').innerText = dataPengguna.credit_balance;
             document.getElementById('treeNameDisplay').innerText = dataPengguna.name;
-          // Panggil fungsi load kotak dari database
-            window.muatTurunSalasilah();
+            window.muatTurunSalasilah(); // Load salasilah
         }
     } else {
         penggunaSemasa = null;
-        // Jika tidak log masuk, arahkan ke halaman log masuk / paparkan modal login
-        console.log("Pengguna belum log masuk");
     }
 });
 
-// ==========================================
-// FUNGSI LOG MASUK
-// ==========================================
 window.logMasuk = async (emel, kataLaluan) => {
     try {
         await signInWithEmailAndPassword(auth, emel, kataLaluan);
         alert("Log masuk berjaya!");
-        document.getElementById('authModal').style.display = 'none'; // Sembunyikan modal
+        document.getElementById('authModal').style.display = 'none';
     } catch (error) {
         alert("Log masuk gagal. Sila semak emel dan kata laluan anda.");
-        console.error(error);
     }
 };
 
-// ==========================================
-// FUNGSI PENDAFTARAN & PEMBERIAN KREDIT PERCUMA
-// ==========================================
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
     try {
         const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
         const user = kredensial.user;
 
-        // Cipta profil pengguna dan berikan 10 KREDIT PERCUMA di Firestore
         await setDoc(doc(db, "mynasab_users", user.uid), {
             name: namaKeluarga,
             email: emel,
@@ -90,140 +68,93 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
             created_at: new Date()
         });
 
-        // Cipta rekod Family Tree utama untuk pengguna ini
-        const kodJemputan = Math.random().toString(36).substring(2, 8).toUpperCase();
         await addDoc(collection(db, "mynasab_trees"), {
             tree_name: "Keluarga " + namaKeluarga,
             admin_uid: user.uid,
-            invite_code: kodJemputan,
+            invite_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
             created_at: new Date()
         });
 
         alert("Pendaftaran berjaya! Anda menerima 10 Kredit Kotak percuma.");
-        
-        // ---> TAMBAH BARIS INI UNTUK TUTUP KOTAK BORANG <---
         document.getElementById('authModal').style.display = 'none'; 
-
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
     }
 };
 
-// ==========================================
-// FUNGSI TAMBAH KOTAK & TOLAK KREDIT (WALLET LOGIC)
-// ==========================================
-window.tambahKotak = async (jenisKotak, idKotakInduk) => {
-    if (!penggunaSemasa) {
-        alert("Sila log masuk untuk membina salasilah.");
-        return;
-    }
+window.logKeluar = async () => {
+    try { await signOut(auth); alert("Log keluar berjaya."); location.reload(); } catch (error) {}
+};
 
+// --- 2. FUNGSI TAMBAH KOTAK ---
+window.tambahKotak = async (jenisKotak, idKotakInduk) => {
+    if (!penggunaSemasa) return alert("Sila log masuk.");
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
     try {
         const snapPengguna = await getDoc(refPengguna);
         const bakiTerkini = snapPengguna.data().credit_balance;
 
-        if (bakiTerkini <= 0) {
-            alert("Baki kredit tidak mencukupi. Sila Beli Kredit.");
-            return;
-        }
-
-        if (confirm(`Gunakan 1 kredit untuk tambah kotak (${jenisKotak})?`)) {
+        if (bakiTerkini <= 0) return alert("Baki kredit tidak mencukupi.");
+        if (!confirm(`Gunakan 1 kredit untuk tambah kotak (${jenisKotak})?`)) return;
             
-            // 1. Tolak kredit di Firestore
-            await updateDoc(refPengguna, { credit_balance: increment(-1) });
+        await updateDoc(refPengguna, { credit_balance: increment(-1) });
 
-            // ==========================================
-            // 2. KIRA KOORDINAT KOTAK DAHULU (PENTING!)
-            // ==========================================
-            const canvas = document.getElementById('treeCanvas');
-            const kotakInduk = document.getElementById(idKotakInduk);
-            
-            // Guna offsetTop/offsetLeft supaya sentiasa tepat membaca kedudukan sebenar skrin
-            let topInduk = kotakInduk.offsetTop;
-            let leftInduk = kotakInduk.offsetLeft;
+        const canvas = document.getElementById('treeCanvas');
+        const kotakInduk = document.getElementById(idKotakInduk);
+        
+        let topBaru = kotakInduk.offsetTop;
+        let leftBaru = kotakInduk.offsetLeft;
+        let anjakKiriKanan = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 80) + 120); 
 
-            let topBaru = topInduk;
-            let leftBaru = leftInduk;
+        // Jarak telah dirapatkan menjadi 160px
+        if (jenisKotak === 'parent') { topBaru -= 160; leftBaru += anjakKiriKanan; } 
+        if (jenisKotak === 'child') { topBaru += 160; leftBaru += anjakKiriKanan; }  
+        if (jenisKotak === 'spouse') { leftBaru += 250; } 
 
-            // Anjakan rawak lebih lebar supaya tak bertindih teruk (antara 120px ke 220px ke kiri atau kanan)
-            let arah = Math.random() > 0.5 ? 1 : -1;
-            let anjakKiriKanan = arah * (Math.floor(Math.random() * 100) + 120); 
+        const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
+            owner_uid: penggunaSemasa.uid,
+            node_type: jenisKotak,
+            parent_node_id: idKotakInduk,
+            name: "Ahli Baru",
+            pos_x: leftBaru,  
+            pos_y: topBaru,   
+            created_at: new Date()
+        });
 
-            // Jarak didekatkan jadi 160px (sebelum ini 260px)
-            if (jenisKotak === 'parent') { topBaru -= 160; leftBaru += anjakKiriKanan; } 
-            if (jenisKotak === 'child') { topBaru += 160; leftBaru += anjakKiriKanan; }  
-            if (jenisKotak === 'spouse') { leftBaru += 250; }
+        document.getElementById('creditBalance').innerText = bakiTerkini - 1;
+        
+        const kotakBaru = document.createElement('div');
+        kotakBaru.className = 'node-card';
+        kotakBaru.id = refKotakBaru.id;
+        kotakBaru.setAttribute('data-parent', idKotakInduk);
+        kotakBaru.style.top = topBaru + 'px';
+        kotakBaru.style.left = leftBaru + 'px';
+        kotakBaru.style.zIndex = '10';
 
-            // ==========================================
-            // 3. SIMPAN KOTAK KE FIRESTORE (BESERTA KOORDINAT YANG DAH DIKIRA)
-            // ==========================================
-            const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
-                owner_uid: penggunaSemasa.uid,
-                node_type: jenisKotak,
-                parent_node_id: idKotakInduk,
-                name: "Ahli Baru",
-                pos_x: leftBaru,  
-                pos_y: topBaru,   
-                created_at: new Date()
-            });
+        kotakBaru.innerHTML = `
+            <div id="nama_${refKotakBaru.id}" onclick="bukaProfil('${refKotakBaru.id}')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
+                Ahli Baru (Klik Edit)
+            </div>
+            <button class="add-btn add-top" onclick="tambahKotak('parent', '${refKotakBaru.id}')">+</button>
+            <button class="add-btn add-right" onclick="tambahKotak('spouse', '${refKotakBaru.id}')">+</button>
+            <button class="add-btn add-bottom" onclick="tambahKotak('child', '${refKotakBaru.id}')">+</button>
+        `;
 
-            // 4. Kemas kini paparan baki kredit
-            document.getElementById('creditBalance').innerText = bakiTerkini - 1;
-            
-            // 5. LUKIS KOTAK BAHARU DI SKRIN
-            const kotakBaru = document.createElement('div');
-            kotakBaru.className = 'node-card';
-            kotakBaru.id = refKotakBaru.id;
-            kotakBaru.setAttribute('data-parent', idKotakInduk);
-            kotakBaru.style.top = topBaru + 'px';
-            kotakBaru.style.left = leftBaru + 'px';
+        canvas.appendChild(kotakBaru);
+        window.lukisSemuaGarisan();
+        window.bukaProfil(refKotakBaru.id);
 
-            kotakBaru.innerHTML = `
-                <div id="nama_${refKotakBaru.id}" onclick="bukaProfil('${refKotakBaru.id}')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
-                    Ahli Baru (Klik Edit)
-                </div>
-                <button class="add-btn add-top" onclick="tambahKotak('parent', '${refKotakBaru.id}')">+</button>
-                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${refKotakBaru.id}')">+</button>
-                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${refKotakBaru.id}')">+</button>
-            `;
-
-            canvas.appendChild(kotakBaru);
-            window.lukisSemuaGarisan();
-            
-            window.bukaProfil(refKotakBaru.id);
-        }
-    } catch (error) {
-        alert("Gagal memproses transaksi: " + error.message);
-    }
+    } catch (error) { alert("Gagal memproses transaksi: " + error.message); }
 };
 
-// ==========================================
-// FUNGSI LOG KELUAR
-// ==========================================
-window.logKeluar = async () => {
-    try {
-        await signOut(auth);
-        alert("Log keluar berjaya.");
-        location.reload();
-    } catch (error) {
-        console.error("Ralat log keluar:", error);
-    }
-};
-
-// ==========================================
-// FUNGSI KEMAS KINI PROFIL AHLI (VERSI LENGKAP)
-// ==========================================
+// --- 3. KEMAS KINI PROFIL ---
 window.bukaProfil = async (idKotak) => {
     document.getElementById('editNodeId').value = idKotak;
     document.getElementById('profilForm').reset();
-    
-    // Kembalikan input media sosial ke 1 kotak default
     document.getElementById('containerSosmed').innerHTML = '<input type="url" name="sosmed[]" placeholder="https://facebook.com/..." style="width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">';
     
     try {
-        // Ambil data jika profil tersebut sudah pernah diisi
         const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -233,7 +164,6 @@ window.bukaProfil = async (idKotak) => {
             if(data.city) document.getElementById('editBandar').value = data.city;
             if(data.state) document.getElementById('editNegeri').value = data.state;
             
-            // Muat ulang daftar media sosial jika ada
             if(data.social_links && data.social_links.length > 0) {
                 const container = document.getElementById('containerSosmed');
                 container.innerHTML = ''; 
@@ -245,67 +175,51 @@ window.bukaProfil = async (idKotak) => {
                 });
             }
         }
-    } catch (e) {
-        console.log("Membuka profil baru...");
-    }
+    } catch (e) {}
 
     document.getElementById('profilModal').style.display = 'flex';
 };
 
-document.getElementById('profilForm').addEventListener('submit', async (e) => {
-    e.preventDefault(); 
-    
-    const idKotak = document.getElementById('editNodeId').value;
-    
-    // Kumpulkan semua input media sosial ke dalam satu array
-    const sosmedInputs = document.querySelectorAll('input[name="sosmed[]"]');
-    const pautanSosmed = Array.from(sosmedInputs).map(input => input.value).filter(val => val.trim() !== "");
+const formProfil = document.getElementById('profilForm');
+if (formProfil) {
+    formProfil.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        const idKotak = document.getElementById('editNodeId').value;
+        const pautanSosmed = Array.from(document.querySelectorAll('input[name="sosmed[]"]')).map(input => input.value).filter(val => val.trim() !== "");
 
-    // Siapkan data lengkap
-    const dataKemasKini = {
-        owner_uid: penggunaSemasa.uid, // Wajib ada jika Diri Sendiri (node_root) baru diedit
-        name: document.getElementById('editNama').value,
-        relationship: document.getElementById('editHubungan').value,
-        phone: document.getElementById('editTelefon').value,
-        city: document.getElementById('editBandar').value,
-        state: document.getElementById('editNegeri').value,
-        social_links: pautanSosmed,
-        updated_at: new Date()
-    };
-    
-    try {
-        // Menggunakan setDoc dengan fungsi { merge: true }
-        // Jika kotak belum ada di database (seperti Diri Sendiri), sistem akan membuatkannya otomatis
-        const refKotak = doc(db, "mynasab_nodes", idKotak);
-        await setDoc(refKotak, dataKemasKini, { merge: true });
+        const dataKemasKini = {
+            owner_uid: penggunaSemasa.uid,
+            name: document.getElementById('editNama').value,
+            relationship: document.getElementById('editHubungan').value,
+            phone: document.getElementById('editTelefon').value,
+            city: document.getElementById('editBandar').value,
+            state: document.getElementById('editNegeri').value,
+            social_links: pautanSosmed,
+            updated_at: new Date()
+        };
         
-        // Perbarui tampilan antarmuka
-        const labelNama = document.getElementById('nama_' + idKotak);
-        if (labelNama) {
-            labelNama.innerText = dataKemasKini.name;
-            labelNama.style.textDecoration = "none"; 
-            labelNama.style.color = "#2c3e50";
-        }
-        
-        document.getElementById('profilModal').style.display = 'none';
-        
-    } catch (error) {
-        alert("Gagal menyimpan profil: " + error.message);
-    }
-});
+        try {
+            await setDoc(doc(db, "mynasab_nodes", idKotak), dataKemasKini, { merge: true });
+            
+            const labelNama = document.getElementById('nama_' + idKotak);
+            if (labelNama) {
+                labelNama.innerText = dataKemasKini.name;
+                labelNama.style.textDecoration = "none"; 
+                labelNama.style.color = "#2c3e50";
+            }
+            document.getElementById('profilModal').style.display = 'none';
+        } catch (error) { alert("Gagal menyimpan profil: " + error.message); }
+    });
+}
 
-// ==========================================
-// FUNGSI MUAT TURUN (LOAD) DATA SALASILAH
-// ==========================================
+// --- 4. MUAT TURUN SALASILAH ---
 window.muatTurunSalasilah = async () => {
     if (!penggunaSemasa) return;
-
     try {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
         const canvas = document.getElementById('treeCanvas');
         
-        // RENDER ULANG DASAR KANVAS: Menyertakan elemen SVG (Garis) dan Kotak Diri Sendiri yang dapat diklik
         canvas.innerHTML = `
             <svg id="canvasLines" style="position: absolute; top: 0; left: 0; width: 5000px; height: 5000px; z-index: 0; pointer-events: none;"></svg>
             <div class="node-card" style="top: 2500px; left: 2500px; z-index: 10;" id="node_root">
@@ -320,7 +234,6 @@ window.muatTurunSalasilah = async () => {
             const data = doc.data();
             const idKotak = doc.id;
             
-            // Logika Khusus untuk menimpa nama Kotak "Diri Sendiri" dari database
             if (idKotak === "node_root") {
                 const labelRoot = document.getElementById('nama_node_root');
                 if (labelRoot) {
@@ -328,7 +241,7 @@ window.muatTurunSalasilah = async () => {
                     labelRoot.style.textDecoration = "none";
                     labelRoot.style.color = "#2c3e50";
                 }
-                return; // Lewati proses pembuatan div baru untuk node_root
+                return; 
             }
             
             const kotakBaru = document.createElement('div');
@@ -337,12 +250,10 @@ window.muatTurunSalasilah = async () => {
             kotakBaru.setAttribute('data-parent', data.parent_node_id);
             kotakBaru.style.top = (data.pos_y || 2500) + 'px';
             kotakBaru.style.left = (data.pos_x || 2500) + 'px';
-            kotakBaru.style.zIndex = '10'; // Pastikan kotak selalu berada di atas garis
+            kotakBaru.style.zIndex = '10';
             
             let namaPaparan = data.name || "Ahli Baru";
-            let gayaNama = data.name !== "Ahli Baru" 
-                ? "color: #2c3e50; text-decoration: none;" 
-                : "color: #2980b9; text-decoration: underline;";
+            let gayaNama = data.name !== "Ahli Baru" ? "color: #2c3e50; text-decoration: none;" : "color: #2980b9; text-decoration: underline;";
 
             kotakBaru.innerHTML = `
                 <div id="nama_${idKotak}" onclick="bukaProfil('${idKotak}')" style="font-weight: bold; margin-bottom: 10px; cursor: pointer; ${gayaNama}">
@@ -352,113 +263,34 @@ window.muatTurunSalasilah = async () => {
                 <button class="add-btn add-right" onclick="tambahKotak('spouse', '${idKotak}')">+</button>
                 <button class="add-btn add-bottom" onclick="tambahKotak('child', '${idKotak}')">+</button>
             `;
-            
             canvas.appendChild(kotakBaru);
         });
 
-        // Paksa pemuatan fungsi gambar garis berjalan setelah keseluruhan HTML tercetak (delay 500 milidetik)
         setTimeout(() => window.lukisSemuaGarisan(), 500);
         
-    } catch (error) {
-        console.error("Gagal memuat turun salasilah:", error);
-    }
-};
-      
-// ==========================================
-// FUNGSI MUAT TURUN (LOAD) DATA SALASILAH
-// ==========================================
-window.muatTurunSalasilah = async () => {
-    if (!penggunaSemasa) return;
-
-    try {
-        // Cari kotak dalam database yang sepadan dengan ID pengguna (owner_uid)
-        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
-        const querySnapshot = await getDocs(q);
-        
-        const canvas = document.getElementById('treeCanvas');
-        
-        // Padam semua kotak kecuali 'Diri Sendiri' untuk pastikan kanvas bersih sebelum dilukis semula
-        canvas.innerHTML = `
-            <div class="node-card" style="top: 2500px; left: 2500px;" id="node_root">
-                <div style="font-weight: bold; margin-bottom: 10px;">Diri Sendiri</div>
-                <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
-                <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
-                <button class="add-btn add-bottom" onclick="tambahKotak('child', 'node_root')">+</button>
-            </div>
-        `;
-        
-        // Lukis setiap kotak yang dijumpai dalam database
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const idKotak = doc.id;
-            
-            const kotakBaru = document.createElement('div');
-            kotakBaru.className = 'node-card';
-            kotakBaru.id = idKotak;
-            kotakBaru.setAttribute('data-parent', data.parent_node_id); // Tag rujukan parent
-            
-            // Guna koordinat dari database. Kalau takde (data lama), letak kat tengah (2500px)
-            kotakBaru.style.top = (data.pos_y || 2500) + 'px';
-            kotakBaru.style.left = (data.pos_x || 2500) + 'px';
-            
-            let namaPaparan = data.name || "Ahli Baru";
-            let gayaNama = data.name !== "Ahli Baru" 
-                ? "color: #2c3e50; text-decoration: none;" 
-                : "color: #2980b9; text-decoration: underline;";
-
-            kotakBaru.innerHTML = `
-                <div id="nama_${idKotak}" onclick="bukaProfil('${idKotak}')" style="font-weight: bold; margin-bottom: 10px; cursor: pointer; ${gayaNama}">
-                    ${namaPaparan}
-                </div>
-                <button class="add-btn add-top" onclick="tambahKotak('parent', '${idKotak}')">+</button>
-                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${idKotak}')">+</button>
-                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${idKotak}')">+</button>
-            `;
-            
-            canvas.appendChild(kotakBaru);
-        });
-
-// Lukis garisan selepas semua kotak berjaya dimuat turun
-    setTimeout(() => window.lukisSemuaGarisan(), 500);
-      
-    } catch (error) {
-        console.error("Gagal memuat turun salasilah:", error);
-    }
+    } catch (error) { console.error("Gagal memuat turun salasilah:", error); }
 };
 
-// ==========================================
-// FUNGSI LUKIS GARISAN PENYAMBUNG (SVG)
-// ==========================================
+// --- 5. LUKIS GARISAN ---
 window.lukisSemuaGarisan = () => {
     const svg = document.getElementById('canvasLines');
     if (!svg) return;
+    svg.innerHTML = ''; 
     
-    svg.innerHTML = ''; // Padam garisan lama sebelum lukis semula
-    
-    const semuaKotak = document.querySelectorAll('.node-card');
-    
-    semuaKotak.forEach(kotak => {
+    document.querySelectorAll('.node-card').forEach(kotak => {
         const parentId = kotak.getAttribute('data-parent');
-        
         if (parentId && parentId !== "undefined") {
             const kotakInduk = document.getElementById(parentId);
-            
             if (kotakInduk) {
-                // Gunakan offset supaya 100% tepat mengesan koordinat kotak di skrin
-                const pCenterX = kotakInduk.offsetLeft + (kotakInduk.offsetWidth / 2);
-                const pCenterY = kotakInduk.offsetTop + (kotakInduk.offsetHeight / 2); 
-                
-                const cCenterX = kotak.offsetLeft + (kotak.offsetWidth / 2);
-                const cCenterY = kotak.offsetTop + (kotak.offsetHeight / 2);
+                const pX = kotakInduk.offsetLeft + (kotakInduk.offsetWidth / 2);
+                const pY = kotakInduk.offsetTop + (kotakInduk.offsetHeight / 2); 
+                const cX = kotak.offsetLeft + (kotak.offsetWidth / 2);
+                const cY = kotak.offsetTop + (kotak.offsetHeight / 2);
                 
                 const garisan = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                garisan.setAttribute('x1', pCenterX);
-                garisan.setAttribute('y1', pCenterY);
-                garisan.setAttribute('x2', cCenterX);
-                garisan.setAttribute('y2', cCenterY);
-                garisan.setAttribute('stroke', '#95a5a6'); 
-                garisan.setAttribute('stroke-width', '3'); 
-                
+                garisan.setAttribute('x1', pX); garisan.setAttribute('y1', pY);
+                garisan.setAttribute('x2', cX); garisan.setAttribute('y2', cY);
+                garisan.setAttribute('stroke', '#95a5a6'); garisan.setAttribute('stroke-width', '3'); 
                 svg.appendChild(garisan);
             }
         }
