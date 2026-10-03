@@ -210,46 +210,156 @@ window.logKeluar = async () => {
 };
 
 // ==========================================
-// FUNGSI KEMAS KINI PROFIL AHLI (NAMA & LOKASI)
+// FUNGSI KEMAS KINI PROFIL AHLI (VERSI LENGKAP)
 // ==========================================
-window.bukaProfil = (idKotak) => {
-    // Masukkan ID kotak ke dalam form supaya sistem tahu kotak mana nak diupdate
+window.bukaProfil = async (idKotak) => {
     document.getElementById('editNodeId').value = idKotak;
-    document.getElementById('editNama').value = ""; // Kosongkan form
-    document.getElementById('editLokasi').value = "";
+    document.getElementById('profilForm').reset();
     
-    // Tunjukkan Modal Profil
+    // Kembalikan input media sosial ke 1 kotak default
+    document.getElementById('containerSosmed').innerHTML = '<input type="url" name="sosmed[]" placeholder="https://facebook.com/..." style="width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">';
+    
+    try {
+        // Ambil data jika profil tersebut sudah pernah diisi
+        const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if(data.name) document.getElementById('editNama').value = data.name;
+            if(data.relationship) document.getElementById('editHubungan').value = data.relationship;
+            if(data.phone) document.getElementById('editTelefon').value = data.phone;
+            if(data.city) document.getElementById('editBandar').value = data.city;
+            if(data.state) document.getElementById('editNegeri').value = data.state;
+            
+            // Muat ulang daftar media sosial jika ada
+            if(data.social_links && data.social_links.length > 0) {
+                const container = document.getElementById('containerSosmed');
+                container.innerHTML = ''; 
+                data.social_links.forEach(link => {
+                    const input = document.createElement('input');
+                    input.type = 'url'; input.name = 'sosmed[]'; input.value = link;
+                    input.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;';
+                    container.appendChild(input);
+                });
+            }
+        }
+    } catch (e) {
+        console.log("Membuka profil baru...");
+    }
+
     document.getElementById('profilModal').style.display = 'flex';
 };
 
-// Fungsi ini dipanggil bila borang profil ditekan "Simpan Profil"
 document.getElementById('profilForm').addEventListener('submit', async (e) => {
-    e.preventDefault(); // Halang page dari refresh
+    e.preventDefault(); 
     
     const idKotak = document.getElementById('editNodeId').value;
-    const namaBaru = document.getElementById('editNama').value;
-    const lokasiBaru = document.getElementById('editLokasi').value;
+    
+    // Kumpulkan semua input media sosial ke dalam satu array
+    const sosmedInputs = document.querySelectorAll('input[name="sosmed[]"]');
+    const pautanSosmed = Array.from(sosmedInputs).map(input => input.value).filter(val => val.trim() !== "");
+
+    // Siapkan data lengkap
+    const dataKemasKini = {
+        owner_uid: penggunaSemasa.uid, // Wajib ada jika Diri Sendiri (node_root) baru diedit
+        name: document.getElementById('editNama').value,
+        relationship: document.getElementById('editHubungan').value,
+        phone: document.getElementById('editTelefon').value,
+        city: document.getElementById('editBandar').value,
+        state: document.getElementById('editNegeri').value,
+        social_links: pautanSosmed,
+        updated_at: new Date()
+    };
     
     try {
-        // 1. Simpan (Update) data ke dalam Firestore
+        // Menggunakan setDoc dengan fungsi { merge: true }
+        // Jika kotak belum ada di database (seperti Diri Sendiri), sistem akan membuatkannya otomatis
         const refKotak = doc(db, "mynasab_nodes", idKotak);
-        await updateDoc(refKotak, {
-            name: namaBaru,
-            city: lokasiBaru
-        });
+        await setDoc(refKotak, dataKemasKini, { merge: true });
         
-        // 2. Tukar nama pada kotak di skrin supaya pengguna terus nampak perubahan
-        document.getElementById('nama_' + idKotak).innerText = namaBaru;
-        document.getElementById('nama_' + idKotak).style.textDecoration = "none"; // Buang garisan underline lepas dah edit
-        document.getElementById('nama_' + idKotak).style.color = "#2c3e50";
+        // Perbarui tampilan antarmuka
+        const labelNama = document.getElementById('nama_' + idKotak);
+        if (labelNama) {
+            labelNama.innerText = dataKemasKini.name;
+            labelNama.style.textDecoration = "none"; 
+            labelNama.style.color = "#2c3e50";
+        }
         
-        // 3. Tutup modal
         document.getElementById('profilModal').style.display = 'none';
         
     } catch (error) {
         alert("Gagal menyimpan profil: " + error.message);
     }
 });
+
+// ==========================================
+// FUNGSI MUAT TURUN (LOAD) DATA SALASILAH
+// ==========================================
+window.muatTurunSalasilah = async () => {
+    if (!penggunaSemasa) return;
+
+    try {
+        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
+        const querySnapshot = await getDocs(q);
+        const canvas = document.getElementById('treeCanvas');
+        
+        // RENDER ULANG DASAR KANVAS: Menyertakan elemen SVG (Garis) dan Kotak Diri Sendiri yang dapat diklik
+        canvas.innerHTML = `
+            <svg id="canvasLines" style="position: absolute; top: 0; left: 0; width: 5000px; height: 5000px; z-index: 0; pointer-events: none;"></svg>
+            <div class="node-card" style="top: 2500px; left: 2500px; z-index: 10;" id="node_root">
+                <div id="nama_node_root" onclick="bukaProfil('node_root')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">Diri Sendiri (Klik Edit)</div>
+                <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
+                <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
+                <button class="add-btn add-bottom" onclick="tambahKotak('child', 'node_root')">+</button>
+            </div>
+        `;
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const idKotak = doc.id;
+            
+            // Logika Khusus untuk menimpa nama Kotak "Diri Sendiri" dari database
+            if (idKotak === "node_root") {
+                const labelRoot = document.getElementById('nama_node_root');
+                if (labelRoot) {
+                    labelRoot.innerText = data.name;
+                    labelRoot.style.textDecoration = "none";
+                    labelRoot.style.color = "#2c3e50";
+                }
+                return; // Lewati proses pembuatan div baru untuk node_root
+            }
+            
+            const kotakBaru = document.createElement('div');
+            kotakBaru.className = 'node-card';
+            kotakBaru.id = idKotak;
+            kotakBaru.setAttribute('data-parent', data.parent_node_id);
+            kotakBaru.style.top = (data.pos_y || 2500) + 'px';
+            kotakBaru.style.left = (data.pos_x || 2500) + 'px';
+            kotakBaru.style.zIndex = '10'; // Pastikan kotak selalu berada di atas garis
+            
+            let namaPaparan = data.name || "Ahli Baru";
+            let gayaNama = data.name !== "Ahli Baru" 
+                ? "color: #2c3e50; text-decoration: none;" 
+                : "color: #2980b9; text-decoration: underline;";
+
+            kotakBaru.innerHTML = `
+                <div id="nama_${idKotak}" onclick="bukaProfil('${idKotak}')" style="font-weight: bold; margin-bottom: 10px; cursor: pointer; ${gayaNama}">
+                    ${namaPaparan}
+                </div>
+                <button class="add-btn add-top" onclick="tambahKotak('parent', '${idKotak}')">+</button>
+                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${idKotak}')">+</button>
+                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${idKotak}')">+</button>
+            `;
+            
+            canvas.appendChild(kotakBaru);
+        });
+
+        // Paksa pemuatan fungsi gambar garis berjalan setelah keseluruhan HTML tercetak (delay 500 milidetik)
+        setTimeout(() => window.lukisSemuaGarisan(), 500);
+        
+    } catch (error) {
+        console.error("Gagal memuat turun salasilah:", error);
+    }
+};
       
 // ==========================================
 // FUNGSI MUAT TURUN (LOAD) DATA SALASILAH
