@@ -156,8 +156,12 @@
     <!-- Ruang Pokok Keluarga -->
     <div class="tree-container" id="panContainer">
         <div class="tree-canvas" id="treeCanvas">
+            
+            <!-- TAMBAH SVG INI UNTUK LUKIS GARISAN -->
+            <svg id="canvasLines" style="position: absolute; top: 0; left: 0; width: 5000px; height: 5000px; z-index: 0; pointer-events: none;"></svg>
+
             <!-- Contoh 1 Kotak Di Tengah Canvas -->
-            <div class="node-card" style="top: 2500px; left: 2500px;" id="node_root">
+            <div class="node-card" style="top: 2500px; left: 2500px; z-index: 10;" id="node_root">
                 <div style="font-weight: bold; margin-bottom: 10px;">Diri Sendiri</div>
                 <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
                 <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
