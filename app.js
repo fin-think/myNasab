@@ -31,6 +31,12 @@ let penggunaSemasa = null;
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
+
+        // --- TAMBAH DUA BARIS INI ---
+        const welcomeElement = document.getElementById('welcomeScreen');
+        if (welcomeElement) welcomeElement.style.display = 'none'; 
+        // ----------------------------
+      
         // Dapatkan data profil dan baki kredit dari Firestore
         const refPengguna = doc(db, "mynasab_users", user.uid);
         const snapPengguna = await getDoc(refPengguna);
