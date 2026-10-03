@@ -94,6 +94,10 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
         });
 
         alert("Pendaftaran berjaya! Anda menerima 10 Kredit Kotak percuma.");
+        
+        // ---> TAMBAH BARIS INI UNTUK TUTUP KOTAK BORANG <---
+        document.getElementById('authModal').style.display = 'none'; 
+
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
     }
@@ -111,40 +115,67 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
     try {
-        // Semak baki terkini dari pangkalan data (bukan dari UI untuk elak hack/manipulasi)
         const snapPengguna = await getDoc(refPengguna);
         const bakiTerkini = snapPengguna.data().credit_balance;
 
         if (bakiTerkini <= 0) {
-            alert("Baki kredit tidak mencukupi. Sila Beli Kredit (RM5/RM10/RM20).");
-            // window.location.href = "/topup.html"; // Arahkan ke halaman bayaran (ToyyibPay)
+            alert("Baki kredit tidak mencukupi. Sila Beli Kredit.");
             return;
         }
 
         if (confirm(`Gunakan 1 kredit untuk tambah kotak (${jenisKotak})?`)) {
             
-            // 1. Tolak 1 kredit menggunakan 'increment(-1)'. 
-            // Ini sangat penting supaya transaksi selamat jika diklik bertubi-tubi.
-            await updateDoc(refPengguna, {
-                credit_balance: increment(-1)
-            });
+            // 1. Tolak kredit di Firestore
+            await updateDoc(refPengguna, { credit_balance: increment(-1) });
 
-            // 2. Simpan kotak baharu ke dalam collection 'nodes'
+            // 2. Simpan kotak baharu ke Firestore
             const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
                 owner_uid: penggunaSemasa.uid,
                 node_type: jenisKotak,
                 parent_node_id: idKotakInduk,
-                name: "Ahli Baru", // Default name, pengguna akan edit kemudian
+                name: "Ahli Baru",
                 created_at: new Date()
             });
 
-            // 3. Kemas kini baki di skrin secara manual agar responsif
+            // 3. Kemas kini paparan baki kredit
             document.getElementById('creditBalance').innerText = bakiTerkini - 1;
             
-            alert(`Berjaya dipotong 1 kredit. Sila isi maklumat untuk kotak baharu ini.`);
+            // ==========================================
+            // 4. LOGIK MELUKIS KOTAK BAHARU DI SKRIN
+            // ==========================================
+            const canvas = document.getElementById('treeCanvas');
+            const kotakInduk = document.getElementById(idKotakInduk);
             
-            // Logik untuk papar Modal/Borang isian nama dan gambar akan diletakkan di sini.
-            // ...
+            // Dapatkan koordinat (posisi) kotak asal yang diklik
+            let topInduk = parseInt(kotakInduk.style.top);
+            let leftInduk = parseInt(kotakInduk.style.left);
+
+            // Tentukan kedudukan kotak baharu berdasarkan jenis
+            let topBaru = topInduk;
+            let leftBaru = leftInduk;
+
+            if (jenisKotak === 'parent') { topBaru -= 250; }     // Naik ke atas
+            if (jenisKotak === 'child') { topBaru += 250; }      // Turun ke bawah
+            if (jenisKotak === 'spouse') { leftBaru += 250; }    // Gerak ke kanan
+
+            // Cipta elemen HTML (div) untuk kotak baharu
+            const kotakBaru = document.createElement('div');
+            kotakBaru.className = 'node-card';
+            kotakBaru.id = refKotakBaru.id; // Gunakan ID dari pangkalan data
+            kotakBaru.style.top = topBaru + 'px';
+            kotakBaru.style.left = leftBaru + 'px';
+
+            // Masukkan butang dan teks ke dalam kotak baharu
+            kotakBaru.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 10px; color: #e74c3c;">Ahli Baru</div>
+                <button class="add-btn add-top" onclick="tambahKotak('parent', '${refKotakBaru.id}')">+</button>
+                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${refKotakBaru.id}')">+</button>
+                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${refKotakBaru.id}')">+</button>
+            `;
+
+            // Tampal kotak baharu ke atas kanvas
+            canvas.appendChild(kotakBaru);
+            // ==========================================
         }
     } catch (error) {
         alert("Gagal memproses transaksi: " + error.message);
