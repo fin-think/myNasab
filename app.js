@@ -1,10 +1,10 @@
 // ==========================================
-// app.js - Logik Teras FamiliPintar (VERSI 3 MUKTAMAD)
+// app.js - Logik Teras FamiliPintar (VERSI 4 - DASHBOARD)
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA7SW4U--evGtfRyPz5Feh3mEN8MF92gTg",
@@ -26,11 +26,17 @@ let penggunaSemasa = null;
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
+        
+        // Sembunyikan skrin depan & borang login
         const welcomeElement = document.getElementById('welcomeScreen');
         if (welcomeElement) welcomeElement.style.display = 'none'; 
         
         const authModalElement = document.getElementById('authModal');
         if (authModalElement) authModalElement.style.display = 'none';
+        
+        // Munculkan Dashboard
+        const dashboardUtama = document.getElementById('dashboardUtama');
+        if (dashboardUtama) dashboardUtama.classList.remove('hidden');
         
         const refPengguna = doc(db, "mynasab_users", user.uid);
         const snapPengguna = await getDoc(refPengguna);
@@ -39,13 +45,16 @@ onAuthStateChanged(auth, async (user) => {
             const dataPengguna = snapPengguna.data();
             document.getElementById('creditBalance').innerText = dataPengguna.credit_balance;
             document.getElementById('treeNameDisplay').innerText = dataPengguna.name;
-            window.muatTurunSalasilah(); // Load salasilah
+            window.muatTurunSalasilah(); // Load data masuk ke jadual
         }
     } else {
         penggunaSemasa = null;
+        const dashboardUtama = document.getElementById('dashboardUtama');
+        if (dashboardUtama) dashboardUtama.classList.add('hidden');
     }
 });
 
+// --- 2. FUNGSI LOG MASUK & DAFTAR ---
 window.logMasuk = async (emel, kataLaluan) => {
     try {
         await signInWithEmailAndPassword(auth, emel, kataLaluan);
@@ -68,10 +77,12 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
             created_at: new Date()
         });
 
-        await addDoc(collection(db, "mynasab_trees"), {
-            tree_name: "Keluarga " + namaKeluarga,
-            admin_uid: user.uid,
-            invite_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
+        // Cipta Diri Sendiri (Root) secara automatik dalam database
+        await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
+            owner_uid: user.uid,
+            name: namaKeluarga,
+            relationship: "Diri Sendiri (Induk)",
+            is_root: true,
             created_at: new Date()
         });
 
@@ -83,216 +94,58 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
 };
 
 window.logKeluar = async () => {
-    try { await signOut(auth); alert("Log keluar berjaya."); location.reload(); } catch (error) {}
+    try { await signOut(auth); location.reload(); } catch (error) {}
 };
 
-// --- 2. FUNGSI TAMBAH KOTAK ---
-window.tambahKotak = async (jenisKotak, idKotakInduk) => {
-    if (!penggunaSemasa) return alert("Sila log masuk.");
-    const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
-    
-    try {
-        const snapPengguna = await getDoc(refPengguna);
-        const bakiTerkini = snapPengguna.data().credit_balance;
-
-        if (bakiTerkini <= 0) return alert("Baki kredit tidak mencukupi.");
-        if (!confirm(`Gunakan 1 kredit untuk tambah kotak (${jenisKotak})?`)) return;
-            
-        await updateDoc(refPengguna, { credit_balance: increment(-1) });
-
-        const canvas = document.getElementById('treeCanvas');
-        const kotakInduk = document.getElementById(idKotakInduk);
-        
-        let topBaru = kotakInduk.offsetTop;
-        let leftBaru = kotakInduk.offsetLeft;
-        let anjakKiriKanan = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 80) + 120); 
-
-        // Jarak telah dirapatkan menjadi 160px
-        if (jenisKotak === 'parent') { topBaru -= 160; leftBaru += anjakKiriKanan; } 
-        if (jenisKotak === 'child') { topBaru += 160; leftBaru += anjakKiriKanan; }  
-        if (jenisKotak === 'spouse') { leftBaru += 250; } 
-
-        const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
-            owner_uid: penggunaSemasa.uid,
-            node_type: jenisKotak,
-            parent_node_id: idKotakInduk,
-            name: "Ahli Baru",
-            pos_x: leftBaru,  
-            pos_y: topBaru,   
-            created_at: new Date()
-        });
-
-        document.getElementById('creditBalance').innerText = bakiTerkini - 1;
-        
-        const kotakBaru = document.createElement('div');
-        kotakBaru.className = 'node-card';
-        kotakBaru.id = refKotakBaru.id;
-        kotakBaru.setAttribute('data-parent', idKotakInduk);
-        kotakBaru.style.top = topBaru + 'px';
-        kotakBaru.style.left = leftBaru + 'px';
-        kotakBaru.style.zIndex = '10';
-
-        kotakBaru.innerHTML = `
-            <div id="nama_${refKotakBaru.id}" onclick="bukaProfil('${refKotakBaru.id}')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
-                Ahli Baru (Klik Edit)
-            </div>
-            <button class="add-btn add-top" onclick="tambahKotak('parent', '${refKotakBaru.id}')">+</button>
-            <button class="add-btn add-right" onclick="tambahKotak('spouse', '${refKotakBaru.id}')">+</button>
-            <button class="add-btn add-bottom" onclick="tambahKotak('child', '${refKotakBaru.id}')">+</button>
-        `;
-
-        canvas.appendChild(kotakBaru);
-        window.lukisSemuaGarisan();
-        window.bukaProfil(refKotakBaru.id);
-
-    } catch (error) { alert("Gagal memproses transaksi: " + error.message); }
-};
-
-// --- 3. KEMAS KINI PROFIL ---
-window.bukaProfil = async (idKotak) => {
-    document.getElementById('editNodeId').value = idKotak;
-    document.getElementById('profilForm').reset();
-    document.getElementById('containerSosmed').innerHTML = '<input type="url" name="sosmed[]" placeholder="https://facebook.com/..." style="width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">';
-    
-    try {
-        const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if(data.name) document.getElementById('editNama').value = data.name;
-            if(data.relationship) document.getElementById('editHubungan').value = data.relationship;
-            if(data.phone) document.getElementById('editTelefon').value = data.phone;
-            if(data.city) document.getElementById('editBandar').value = data.city;
-            if(data.state) document.getElementById('editNegeri').value = data.state;
-            
-            if(data.social_links && data.social_links.length > 0) {
-                const container = document.getElementById('containerSosmed');
-                container.innerHTML = ''; 
-                data.social_links.forEach(link => {
-                    const input = document.createElement('input');
-                    input.type = 'url'; input.name = 'sosmed[]'; input.value = link;
-                    input.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;';
-                    container.appendChild(input);
-                });
-            }
-        }
-    } catch (e) {}
-
-    document.getElementById('profilModal').style.display = 'flex';
-};
-
-const formProfil = document.getElementById('profilForm');
-if (formProfil) {
-    formProfil.addEventListener('submit', async (e) => {
-        e.preventDefault(); 
-        const idKotak = document.getElementById('editNodeId').value;
-        const pautanSosmed = Array.from(document.querySelectorAll('input[name="sosmed[]"]')).map(input => input.value).filter(val => val.trim() !== "");
-
-        const dataKemasKini = {
-            owner_uid: penggunaSemasa.uid,
-            name: document.getElementById('editNama').value,
-            relationship: document.getElementById('editHubungan').value,
-            phone: document.getElementById('editTelefon').value,
-            city: document.getElementById('editBandar').value,
-            state: document.getElementById('editNegeri').value,
-            social_links: pautanSosmed,
-            updated_at: new Date()
-        };
-        
-        try {
-            await setDoc(doc(db, "mynasab_nodes", idKotak), dataKemasKini, { merge: true });
-            
-            const labelNama = document.getElementById('nama_' + idKotak);
-            if (labelNama) {
-                labelNama.innerText = dataKemasKini.name;
-                labelNama.style.textDecoration = "none"; 
-                labelNama.style.color = "#2c3e50";
-            }
-            document.getElementById('profilModal').style.display = 'none';
-        } catch (error) { alert("Gagal menyimpan profil: " + error.message); }
-    });
-}
-
-// --- 4. MUAT TURUN SALASILAH ---
+// --- 3. FUNGSI MUAT TURUN DATA KE JADUAL DASHBOARD ---
 window.muatTurunSalasilah = async () => {
     if (!penggunaSemasa) return;
     try {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
-        const canvas = document.getElementById('treeCanvas');
+        const tbody = document.getElementById('senaraiAhliTbody');
         
-        canvas.innerHTML = `
-            <svg id="canvasLines" style="position: absolute; top: 0; left: 0; width: 5000px; height: 5000px; z-index: 0; pointer-events: none;"></svg>
-            <div class="node-card" style="top: 2500px; left: 2500px; z-index: 10;" id="node_root">
-                <div id="nama_node_root" onclick="bukaProfil('node_root')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">Diri Sendiri (Klik Edit)</div>
-                <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
-                <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
-                <button class="add-btn add-bottom" onclick="tambahKotak('child', 'node_root')">+</button>
-            </div>
-        `;
+        tbody.innerHTML = ''; // Bersihkan jadual sebelum masukkan data baru
         
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const idKotak = doc.id;
+        if (querySnapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #7f8c8d; padding: 20px;">Belum ada ahli keluarga. Sila tambah ahli.</td></tr>`;
+            return;
+        }
+        
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const idKotak = docSnap.id;
             
-            if (idKotak === "node_root") {
-                const labelRoot = document.getElementById('nama_node_root');
-                if (labelRoot) {
-                    labelRoot.innerText = data.name;
-                    labelRoot.style.textDecoration = "none";
-                    labelRoot.style.color = "#2c3e50";
-                }
-                return; 
+            let nama = data.name || "Tiada Nama";
+            let hubungan = data.relationship || "Belum Ditetapkan";
+            
+            const tr = document.createElement('tr');
+            
+            // Susun butang tindakan (Jangan benarkan buang Diri Sendiri)
+            let butangTindakan = `<a onclick="alert('Borang edit akan dibina di langkah seterusnya!')" class="action-link">✏️ Edit</a>`;
+            if (!data.is_root) {
+                butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
-            
-            const kotakBaru = document.createElement('div');
-            kotakBaru.className = 'node-card';
-            kotakBaru.id = idKotak;
-            kotakBaru.setAttribute('data-parent', data.parent_node_id);
-            kotakBaru.style.top = (data.pos_y || 2500) + 'px';
-            kotakBaru.style.left = (data.pos_x || 2500) + 'px';
-            kotakBaru.style.zIndex = '10';
-            
-            let namaPaparan = data.name || "Ahli Baru";
-            let gayaNama = data.name !== "Ahli Baru" ? "color: #2c3e50; text-decoration: none;" : "color: #2980b9; text-decoration: underline;";
 
-            kotakBaru.innerHTML = `
-                <div id="nama_${idKotak}" onclick="bukaProfil('${idKotak}')" style="font-weight: bold; margin-bottom: 10px; cursor: pointer; ${gayaNama}">
-                    ${namaPaparan}
-                </div>
-                <button class="add-btn add-top" onclick="tambahKotak('parent', '${idKotak}')">+</button>
-                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${idKotak}')">+</button>
-                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${idKotak}')">+</button>
+            tr.innerHTML = `
+                <td><strong>${nama}</strong></td>
+                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${hubungan}</span></td>
+                <td>${butangTindakan}</td>
             `;
-            canvas.appendChild(kotakBaru);
+            tbody.appendChild(tr);
         });
-
-        setTimeout(() => window.lukisSemuaGarisan(), 500);
         
-    } catch (error) { console.error("Gagal memuat turun salasilah:", error); }
+    } catch (error) { console.error("Gagal memuat turun senarai:", error); }
 };
 
-// --- 5. LUKIS GARISAN ---
-window.lukisSemuaGarisan = () => {
-    const svg = document.getElementById('canvasLines');
-    if (!svg) return;
-    svg.innerHTML = ''; 
-    
-    document.querySelectorAll('.node-card').forEach(kotak => {
-        const parentId = kotak.getAttribute('data-parent');
-        if (parentId && parentId !== "undefined") {
-            const kotakInduk = document.getElementById(parentId);
-            if (kotakInduk) {
-                const pX = kotakInduk.offsetLeft + (kotakInduk.offsetWidth / 2);
-                const pY = kotakInduk.offsetTop + (kotakInduk.offsetHeight / 2); 
-                const cX = kotak.offsetLeft + (kotak.offsetWidth / 2);
-                const cY = kotak.offsetTop + (kotak.offsetHeight / 2);
-                
-                const garisan = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                garisan.setAttribute('x1', pX); garisan.setAttribute('y1', pY);
-                garisan.setAttribute('x2', cX); garisan.setAttribute('y2', cY);
-                garisan.setAttribute('stroke', '#95a5a6'); garisan.setAttribute('stroke-width', '3'); 
-                svg.appendChild(garisan);
-            }
+// --- 4. FUNGSI PADAM AHLI (FUNGSI BARU) ---
+window.padamAhli = async (idAhli) => {
+    if(confirm("Anda pasti mahu memadam rekod ahli ini?")) {
+        try {
+            await deleteDoc(doc(db, "mynasab_nodes", idAhli));
+            window.muatTurunSalasilah(); // Refresh jadual selepas padam
+        } catch (e) {
+            alert("Gagal memadam ahli: " + e.message);
         }
-    });
+    }
 };
