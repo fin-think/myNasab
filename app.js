@@ -122,7 +122,7 @@ window.muatTurunSalasilah = async () => {
             const tr = document.createElement('tr');
             
             // Susun butang tindakan (Jangan benarkan buang Diri Sendiri)
-            let butangTindakan = `<a onclick="alert('Borang edit akan dibina di langkah seterusnya!')" class="action-link">✏️ Edit</a>`;
+            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️️ Edit</a>`;
             if (!data.is_root) {
                 butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
@@ -198,3 +198,55 @@ window.tambahAhliBaru = async (nama, hubungan, telefon, lokasi) => {
         alert("Gagal menambah ahli: " + error.message);
     }
 };
+
+// --- 6. FUNGSI KEMASKINI PROFIL AHLI (EDIT) ---
+window.bukaModalEdit = async (idKotak) => {
+    try {
+        // Tarik data profil ahli ini dari database
+        const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Masukkan data ke dalam borang edit
+            document.getElementById('editAhliId').value = idKotak;
+            document.getElementById('editAhliNama').value = data.name || "";
+            document.getElementById('editAhliHubungan').value = data.relationship || "";
+            document.getElementById('editAhliTelefon').value = data.phone || "";
+            document.getElementById('editAhliLokasi').value = data.city || "";
+            
+            // Paparkan borang
+            document.getElementById('modalEditAhli').classList.remove('hidden');
+        }
+    } catch (error) {
+        alert("Gagal memuat turun data profil: " + error.message);
+    }
+};
+
+// Logik menyimpan data yang telah di-edit
+const formEdit = document.getElementById('formEditAhli');
+if(formEdit) {
+    formEdit.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idKotak = document.getElementById('editAhliId').value;
+        const namaBaru = document.getElementById('editAhliNama').value;
+        const telefonBaru = document.getElementById('editAhliTelefon').value;
+        const lokasiBaru = document.getElementById('editAhliLokasi').value;
+        
+        try {
+            // Update data ke Firestore
+            await updateDoc(doc(db, "mynasab_nodes", idKotak), {
+                name: namaBaru,
+                phone: telefonBaru,
+                city: lokasiBaru,
+                updated_at: new Date()
+            });
+            
+            alert("Profil berjaya dikemas kini!");
+            document.getElementById('modalEditAhli').classList.add('hidden');
+            window.muatTurunSalasilah(); // Refresh jadual supaya nama baru dipaparkan
+            
+        } catch (error) {
+            alert("Gagal mengemas kini profil: " + error.message);
+        }
+    });
+}
