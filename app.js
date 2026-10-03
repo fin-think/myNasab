@@ -1,5 +1,6 @@
 // app.js - Logik Teras FamiliPintar
 
+
 // 1. Import Modul Firebase (Gunakan pautan CDN untuk MVP HTML pantas)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -7,12 +8,14 @@ import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, ad
 
 // 2. Konfigurasi Firebase Anda (Dapatkan ini di Firebase Console -> Project Settings)
 const firebaseConfig = {
-    apiKey: "GANTIKAN_DENGAN_API_KEY_ANDA",
-    authDomain: "familipintar-xxxx.firebaseapp.com",
-    projectId: "familipintar-xxxx",
-    storageBucket: "familipintar-xxxx.appspot.com",
-    messagingSenderId: "GANTIKAN_DENGAN_SENDER_ID",
-    appId: "GANTIKAN_DENGAN_APP_ID"
+  apiKey: "AIzaSyA7SW4U--evGtfRyPz5Feh3mEN8MF92gTg",
+  authDomain: "familipintar.firebaseapp.com",
+  databaseURL: "https://familipintar-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "familipintar",
+  storageBucket: "familipintar.firebasestorage.app",
+  messagingSenderId: "277029764059",
+  appId: "1:277029764059:web:0a21bb2e01d868b1ed05fe",
+  measurementId: "G-S3RP7E4460"
 };
 
 // 3. Inisialisasi Firebase
@@ -29,7 +32,7 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
         // Dapatkan data profil dan baki kredit dari Firestore
-        const refPengguna = doc(db, "users", user.uid);
+        const refPengguna = doc(db, "mynasab_users", user.uid);
         const snapPengguna = await getDoc(refPengguna);
 
         if (snapPengguna.exists()) {
@@ -46,6 +49,20 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ==========================================
+// FUNGSI LOG MASUK
+// ==========================================
+window.logMasuk = async (emel, kataLaluan) => {
+    try {
+        await signInWithEmailAndPassword(auth, emel, kataLaluan);
+        alert("Log masuk berjaya!");
+        document.getElementById('authModal').style.display = 'none'; // Sembunyikan modal
+    } catch (error) {
+        alert("Log masuk gagal. Sila semak emel dan kata laluan anda.");
+        console.error(error);
+    }
+};
+
+// ==========================================
 // FUNGSI PENDAFTARAN & PEMBERIAN KREDIT PERCUMA
 // ==========================================
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
@@ -54,7 +71,7 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
         const user = kredensial.user;
 
         // Cipta profil pengguna dan berikan 10 KREDIT PERCUMA di Firestore
-        await setDoc(doc(db, "users", user.uid), {
+        await setDoc(doc(db, "mynasab_users", user.uid), {
             name: namaKeluarga,
             email: emel,
             credit_balance: 10,
@@ -63,7 +80,7 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
 
         // Cipta rekod Family Tree utama untuk pengguna ini
         const kodJemputan = Math.random().toString(36).substring(2, 8).toUpperCase();
-        await addDoc(collection(db, "trees"), {
+        await addDoc(collection(db, "mynasab_trees"), {
             tree_name: "Keluarga " + namaKeluarga,
             admin_uid: user.uid,
             invite_code: kodJemputan,
@@ -85,7 +102,7 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
         return;
     }
 
-    const refPengguna = doc(db, "users", penggunaSemasa.uid);
+    const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
     try {
         // Semak baki terkini dari pangkalan data (bukan dari UI untuk elak hack/manipulasi)
@@ -107,7 +124,7 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             });
 
             // 2. Simpan kotak baharu ke dalam collection 'nodes'
-            const refKotakBaru = await addDoc(collection(db, "nodes"), {
+            const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
                 owner_uid: penggunaSemasa.uid,
                 node_type: jenisKotak,
                 parent_node_id: idKotakInduk,
