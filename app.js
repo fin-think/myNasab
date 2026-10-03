@@ -36,6 +36,10 @@ onAuthStateChanged(auth, async (user) => {
         const welcomeElement = document.getElementById('welcomeScreen');
         if (welcomeElement) welcomeElement.style.display = 'none'; 
         // ----------------------------
+
+        // ---> TAMBAH BARIS INI JUGA (Sembunyikan modal jika terbuka) <---
+        const authModalElement = document.getElementById('authModal');
+        if (authModalElement) authModalElement.style.display = 'none';
       
         // Dapatkan data profil dan baki kredit dari Firestore
         const refPengguna = doc(db, "mynasab_users", user.uid);
