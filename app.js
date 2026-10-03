@@ -4,7 +4,7 @@
 // 1. Import Modul Firebase (Gunakan pautan CDN untuk MVP HTML pantas)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 2. Konfigurasi Firebase Anda (Dapatkan ini di Firebase Console -> Project Settings)
 const firebaseConfig = {
@@ -240,3 +240,60 @@ document.getElementById('profilForm').addEventListener('submit', async (e) => {
     }
 });
       
+// ==========================================
+// FUNGSI MUAT TURUN (LOAD) DATA SALASILAH
+// ==========================================
+window.muatTurunSalasilah = async () => {
+    if (!penggunaSemasa) return;
+
+    try {
+        // Cari kotak dalam database yang sepadan dengan ID pengguna (owner_uid)
+        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
+        const querySnapshot = await getDocs(q);
+        
+        const canvas = document.getElementById('treeCanvas');
+        
+        // Padam semua kotak kecuali 'Diri Sendiri' untuk pastikan kanvas bersih sebelum dilukis semula
+        canvas.innerHTML = `
+            <div class="node-card" style="top: 2500px; left: 2500px;" id="node_root">
+                <div style="font-weight: bold; margin-bottom: 10px;">Diri Sendiri</div>
+                <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
+                <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
+                <button class="add-btn add-bottom" onclick="tambahKotak('child', 'node_root')">+</button>
+            </div>
+        `;
+        
+        // Lukis setiap kotak yang dijumpai dalam database
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const idKotak = doc.id;
+            
+            const kotakBaru = document.createElement('div');
+            kotakBaru.className = 'node-card';
+            kotakBaru.id = idKotak;
+            
+            // Guna koordinat dari database. Kalau takde (data lama), letak kat tengah (2500px)
+            kotakBaru.style.top = (data.pos_y || 2500) + 'px';
+            kotakBaru.style.left = (data.pos_x || 2500) + 'px';
+            
+            let namaPaparan = data.name || "Ahli Baru";
+            let gayaNama = data.name !== "Ahli Baru" 
+                ? "color: #2c3e50; text-decoration: none;" 
+                : "color: #2980b9; text-decoration: underline;";
+
+            kotakBaru.innerHTML = `
+                <div id="nama_${idKotak}" onclick="bukaProfil('${idKotak}')" style="font-weight: bold; margin-bottom: 10px; cursor: pointer; ${gayaNama}">
+                    ${namaPaparan}
+                </div>
+                <button class="add-btn add-top" onclick="tambahKotak('parent', '${idKotak}')">+</button>
+                <button class="add-btn add-right" onclick="tambahKotak('spouse', '${idKotak}')">+</button>
+                <button class="add-btn add-bottom" onclick="tambahKotak('child', '${idKotak}')">+</button>
+            `;
+            
+            canvas.appendChild(kotakBaru);
+        });
+        
+    } catch (error) {
+        console.error("Gagal memuat turun salasilah:", error);
+    }
+};
