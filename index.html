@@ -186,7 +186,9 @@
 
             <!-- Contoh 1 Kotak Di Tengah Canvas -->
             <div class="node-card" style="top: 2500px; left: 2500px; z-index: 10;" id="node_root">
-                <div style="font-weight: bold; margin-bottom: 10px;">Diri Sendiri</div>
+                <div id="nama_node_root" onclick="bukaProfil('node_root')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
+                    Diri Sendiri (Klik Edit)
+                </div>
                 <button class="add-btn add-top" onclick="tambahKotak('parent', 'node_root')">+</button>
                 <button class="add-btn add-right" onclick="tambahKotak('spouse', 'node_root')">+</button>
                 <button class="add-btn add-bottom" onclick="tambahKotak('child', 'node_root')">+</button>
