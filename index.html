@@ -136,6 +136,41 @@
             </form>
         </div>
     </div>
+
+<!-- Modal Kemaskini Profil (Edit) -->
+    <div id="modalEditAhli" class="modal-overlay hidden">
+        <div class="modal-box" style="max-height: 85vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 15px; color: #2c3e50;">Kemaskini Profil</h2>
+            <form id="formEditAhli">
+                <input type="hidden" id="editAhliId">
+                
+                <div class="input-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" id="editAhliNama" required>
+                </div>
+                
+                <div class="input-group">
+                    <label>Hubungan (Ketetapan Sistem)</label>
+                    <input type="text" id="editAhliHubungan" disabled style="background-color: #f8f9f9; color: #7f8c8d; font-weight: bold; cursor: not-allowed;">
+                    <small style="color: #95a5a6;">*Hubungan tidak boleh diubah selepas didaftarkan.</small>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>No. Telefon</label>
+                        <input type="tel" id="editAhliTelefon">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>Lokasi (Bandar)</label>
+                        <input type="text" id="editAhliLokasi">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="background-color: #2980b9; margin-top: 15px;">Simpan Perubahan</button>
+                <button type="button" onclick="document.getElementById('modalEditAhli').classList.add('hidden')" style="background:transparent; border:none; color:#7f8c8d; width:100%; margin-top:10px; cursor:pointer;">Batal</button>
+            </form>
+        </div>
+    </div>
     
     <!-- Antaramuka Utama (Hanya muncul lepas login) -->
     <div id="dashboardUtama" class="hidden">
