@@ -120,12 +120,12 @@
     </div>
 </div>
 
-<!-- Modal Profil Ahli (Untuk Isi Nama) -->
+<!-- Modal Profil Ahli (Diperbarui) -->
 <div id="profilModal" class="modal-overlay" style="display: none;">
-    <div class="modal-box">
-        <h2 style="margin-bottom: 15px;">Profil Ahli</h2>
+    <div class="modal-box" style="max-height: 85vh; overflow-y: auto;">
+        <h2 style="margin-bottom: 15px;">Profil Lengkap Ahli</h2>
         <form id="profilForm">
-            <input type="hidden" id="editNodeId"> <!-- Simpan ID Kotak secara rahsia -->
+            <input type="hidden" id="editNodeId">
             
             <div class="input-group">
                 <label>Nama Penuh</label>
@@ -133,11 +133,35 @@
             </div>
             
             <div class="input-group">
-                <label>Lokasi / Negeri</label>
-                <input type="text" id="editLokasi" placeholder="Cth: Shah Alam, Selangor">
+                <label>Hubungan (Peranan)</label>
+                <input type="text" id="editHubungan" placeholder="Cth: Ayah, Isteri, Anak">
+            </div>
+
+            <div class="input-group">
+                <label>No. Telefon</label>
+                <input type="tel" id="editTelefon" placeholder="Cth: 0123456789">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="input-group" style="flex: 1;">
+                    <label>Bandar</label>
+                    <input type="text" id="editBandar" placeholder="Cth: Shah Alam">
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label>Negeri</label>
+                    <input type="text" id="editNegeri" placeholder="Cth: Selangor">
+                </div>
             </div>
             
-            <button type="submit" class="btn-primary" style="background-color: #27ae60;">Simpan Profil</button>
+            <div class="input-group">
+                <label>Pautan Media Sosial</label>
+                <div id="containerSosmed">
+                    <input type="url" name="sosmed[]" placeholder="https://facebook.com/..." style="width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                </div>
+                <button type="button" onclick="tambahInputSosmed()" style="background: #ecf0f1; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 5px; width: 100%; font-weight: bold;">+ Tambah Pautan Lain</button>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="background-color: #27ae60; margin-top: 15px;">Simpan Profil</button>
             <button type="button" onclick="document.getElementById('profilModal').style.display='none'" style="background:transparent; border:none; color:#7f8c8d; width:100%; margin-top:10px; cursor:pointer;">Batal</button>
         </form>
     </div>
@@ -173,6 +197,18 @@
     <!-- Firebase SDK (Modular V9) dimuatkan di sini kelak -->
     <script type="module" src="app.js"></script>
     <script>
+
+// Fungsi untuk menambah kolom tautan Media Sosial baru secara dinamis
+function tambahInputSosmed() {
+    const container = document.getElementById('containerSosmed');
+    const inputBaru = document.createElement('input');
+    inputBaru.type = 'url';
+    inputBaru.name = 'sosmed[]';
+    inputBaru.placeholder = 'https://instagram.com/...';
+    inputBaru.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;';
+    container.appendChild(inputBaru);
+}
+        
         // ==========================================
         // 1. LOGIK SERET KANVAS (DRAG & PAN)
         // ==========================================
