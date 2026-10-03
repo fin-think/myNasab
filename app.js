@@ -134,22 +134,8 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             // 1. Tolak kredit di Firestore
             await updateDoc(refPengguna, { credit_balance: increment(-1) });
 
-            // 2. Simpan kotak baharu ke Firestore (BESERTA KOORDINAT)
-            const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
-                owner_uid: penggunaSemasa.uid,
-                node_type: jenisKotak,
-                parent_node_id: idKotakInduk,
-                name: "Ahli Baru",
-                pos_x: leftBaru,  // <-- TAMBAH NI
-                pos_y: topBaru,   // <-- TAMBAH NI
-                created_at: new Date()
-            });
-
-            // 3. Kemas kini paparan baki kredit
-            document.getElementById('creditBalance').innerText = bakiTerkini - 1;
-            
             // ==========================================
-            // 4. LOGIK MELUKIS KOTAK BAHARU DI SKRIN
+            // 2. KIRA KOORDINAT KOTAK DAHULU (PENTING!)
             // ==========================================
             const canvas = document.getElementById('treeCanvas');
             const kotakInduk = document.getElementById(idKotakInduk);
@@ -160,13 +146,30 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             let topBaru = topInduk;
             let leftBaru = leftInduk;
 
-            // Tambah sedikit anjakan rawak supaya kotak tak bertindih 100% jika ditekan banyak kali
-            let anjakKiriKanan = Math.floor(Math.random() * 160) - 80; // Anjak antara -80px ke 80px
+            // Tambah sedikit anjakan rawak
+            let anjakKiriKanan = Math.floor(Math.random() * 160) - 80; 
 
             if (jenisKotak === 'parent') { topBaru -= 260; leftBaru += anjakKiriKanan; } 
             if (jenisKotak === 'child') { topBaru += 260; leftBaru += anjakKiriKanan; }  
-            if (jenisKotak === 'spouse') { leftBaru += 280; } // Pasangan biasa di sebelah kanan terus
+            if (jenisKotak === 'spouse') { leftBaru += 280; } 
 
+            // ==========================================
+            // 3. SIMPAN KOTAK KE FIRESTORE (BESERTA KOORDINAT YANG DAH DIKIRA)
+            // ==========================================
+            const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
+                owner_uid: penggunaSemasa.uid,
+                node_type: jenisKotak,
+                parent_node_id: idKotakInduk,
+                name: "Ahli Baru",
+                pos_x: leftBaru,  
+                pos_y: topBaru,   
+                created_at: new Date()
+            });
+
+            // 4. Kemas kini paparan baki kredit
+            document.getElementById('creditBalance').innerText = bakiTerkini - 1;
+            
+            // 5. LUKIS KOTAK BAHARU DI SKRIN
             const kotakBaru = document.createElement('div');
             kotakBaru.className = 'node-card';
             kotakBaru.id = refKotakBaru.id;
@@ -174,7 +177,6 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             kotakBaru.style.top = topBaru + 'px';
             kotakBaru.style.left = leftBaru + 'px';
 
-            // Jadikan teks nama boleh diklik (cursor: pointer)
             kotakBaru.innerHTML = `
                 <div id="nama_${refKotakBaru.id}" onclick="bukaProfil('${refKotakBaru.id}')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
                     Ahli Baru (Klik Edit)
@@ -187,9 +189,12 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             canvas.appendChild(kotakBaru);
             window.lukisSemuaGarisan();
             
-            // Terus buka borang profil bila kotak baharu tercipta
             window.bukaProfil(refKotakBaru.id);
-            // ==========================================
+        }
+    } catch (error) {
+        alert("Gagal memproses transaksi: " + error.message);
+    }
+};
 
 // ==========================================
 // FUNGSI LOG KELUAR
