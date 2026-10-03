@@ -105,10 +105,21 @@ window.muatTurunSalasilah = async () => {
         const querySnapshot = await getDocs(q);
         const tbody = document.getElementById('senaraiAhliTbody');
         
-        tbody.innerHTML = ''; // Bersihkan jadual sebelum masukkan data baru
+        tbody.innerHTML = ''; 
         
+        // AUTO-PEMULIHAN: Jika jadual kosong, bina 'Diri Sendiri' secara automatik
         if (querySnapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #7f8c8d; padding: 20px;">Belum ada ahli keluarga. Sila tambah ahli.</td></tr>`;
+            const namaPenuh = document.getElementById('treeNameDisplay').innerText || "Ketua Keluarga";
+            await setDoc(doc(db, "mynasab_nodes", "root_" + penggunaSemasa.uid), {
+                owner_uid: penggunaSemasa.uid,
+                name: namaPenuh,
+                relationship: "Diri Sendiri (Induk)",
+                is_root: true,
+                created_at: new Date()
+            });
+            
+            // Panggil fungsi ini semula untuk paparkan data yang baru dibina
+            window.muatTurunSalasilah();
             return;
         }
         
@@ -121,9 +132,9 @@ window.muatTurunSalasilah = async () => {
             
             const tr = document.createElement('tr');
             
-            // Susun butang tindakan (Jangan benarkan buang Diri Sendiri)
-            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️️ Edit</a>`;
-            if (!data.is_root) {
+            // Susun butang tindakan
+            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
+            if (!data.is_root) { // Halang Diri Sendiri dari dipadam
                 butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
 
