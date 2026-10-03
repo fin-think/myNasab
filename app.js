@@ -50,6 +50,8 @@ onAuthStateChanged(auth, async (user) => {
             // Kemas kini UI di top-bar
             document.getElementById('creditBalance').innerText = dataPengguna.credit_balance;
             document.getElementById('treeNameDisplay').innerText = dataPengguna.name;
+          // Panggil fungsi load kotak dari database
+            window.muatTurunSalasilah();
         }
     } else {
         penggunaSemasa = null;
@@ -132,12 +134,14 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             // 1. Tolak kredit di Firestore
             await updateDoc(refPengguna, { credit_balance: increment(-1) });
 
-            // 2. Simpan kotak baharu ke Firestore
+            // 2. Simpan kotak baharu ke Firestore (BESERTA KOORDINAT)
             const refKotakBaru = await addDoc(collection(db, "mynasab_nodes"), {
                 owner_uid: penggunaSemasa.uid,
                 node_type: jenisKotak,
                 parent_node_id: idKotakInduk,
                 name: "Ahli Baru",
+                pos_x: leftBaru,  // <-- TAMBAH NI
+                pos_y: topBaru,   // <-- TAMBAH NI
                 created_at: new Date()
             });
 
