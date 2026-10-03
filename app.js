@@ -140,18 +140,21 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             const canvas = document.getElementById('treeCanvas');
             const kotakInduk = document.getElementById(idKotakInduk);
             
-            let topInduk = parseInt(kotakInduk.style.top);
-            let leftInduk = parseInt(kotakInduk.style.left);
+            // Guna offsetTop/offsetLeft supaya sentiasa tepat membaca kedudukan sebenar skrin
+            let topInduk = kotakInduk.offsetTop;
+            let leftInduk = kotakInduk.offsetLeft;
 
             let topBaru = topInduk;
             let leftBaru = leftInduk;
 
-            // Tambah sedikit anjakan rawak
-            let anjakKiriKanan = Math.floor(Math.random() * 160) - 80; 
+            // Anjakan rawak lebih lebar supaya tak bertindih teruk (antara 120px ke 220px ke kiri atau kanan)
+            let arah = Math.random() > 0.5 ? 1 : -1;
+            let anjakKiriKanan = arah * (Math.floor(Math.random() * 100) + 120); 
 
-            if (jenisKotak === 'parent') { topBaru -= 260; leftBaru += anjakKiriKanan; } 
-            if (jenisKotak === 'child') { topBaru += 260; leftBaru += anjakKiriKanan; }  
-            if (jenisKotak === 'spouse') { leftBaru += 280; } 
+            // Jarak didekatkan jadi 160px (sebelum ini 260px)
+            if (jenisKotak === 'parent') { topBaru -= 160; leftBaru += anjakKiriKanan; } 
+            if (jenisKotak === 'child') { topBaru += 160; leftBaru += anjakKiriKanan; }  
+            if (jenisKotak === 'spouse') { leftBaru += 250; }
 
             // ==========================================
             // 3. SIMPAN KOTAK KE FIRESTORE (BESERTA KOORDINAT YANG DAH DIKIRA)
@@ -441,30 +444,23 @@ window.lukisSemuaGarisan = () => {
             const kotakInduk = document.getElementById(parentId);
             
             if (kotakInduk) {
-                // Kira titik tengah kotak induk (parent)
-                const pTop = parseInt(kotakInduk.style.top);
-                const pLeft = parseInt(kotakInduk.style.left);
-                const pCenterX = pLeft + 115; // Lebar kad + padding
-                const pCenterY = pTop + (kotakInduk.offsetHeight / 2) || pTop + 50; 
+                // Gunakan offset supaya 100% tepat mengesan koordinat kotak di skrin
+                const pCenterX = kotakInduk.offsetLeft + (kotakInduk.offsetWidth / 2);
+                const pCenterY = kotakInduk.offsetTop + (kotakInduk.offsetHeight / 2); 
                 
-                // Kira titik tengah kotak ini (child)
-                const cTop = parseInt(kotak.style.top);
-                const cLeft = parseInt(kotak.style.left);
-                const cCenterX = cLeft + 115;
-                const cCenterY = cTop + (kotak.offsetHeight / 2) || cTop + 50;
+                const cCenterX = kotak.offsetLeft + (kotak.offsetWidth / 2);
+                const cCenterY = kotak.offsetTop + (kotak.offsetHeight / 2);
                 
-                // Cipta garisan menggunakan SVG
                 const garisan = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 garisan.setAttribute('x1', pCenterX);
                 garisan.setAttribute('y1', pCenterY);
                 garisan.setAttribute('x2', cCenterX);
                 garisan.setAttribute('y2', cCenterY);
-                garisan.setAttribute('stroke', '#95a5a6'); // Warna kelabu
-                garisan.setAttribute('stroke-width', '3'); // Ketebalan garisan
+                garisan.setAttribute('stroke', '#95a5a6'); 
+                garisan.setAttribute('stroke-width', '3'); 
                 
-                // Masukkan ke dalam kanvas SVG
                 svg.appendChild(garisan);
             }
         }
     });
-};      
+};
