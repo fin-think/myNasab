@@ -23,10 +23,64 @@
         .add-top { top: -12px; left: 50%; transform: translateX(-50%); }
         .add-bottom { bottom: -12px; left: 50%; transform: translateX(-50%); }
         .add-right { right: -12px; top: 50%; transform: translateY(-50%); }
+
+/* Gaya Modal Auth */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8); z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+}
+.modal-box {
+    background: #fff; padding: 30px; border-radius: 10px;
+    width: 90%; max-width: 400px; text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-box h2 { margin-top: 0; color: #2c3e50; }
+.input-group { margin-bottom: 15px; text-align: left; }
+.input-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+.input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+.btn-primary { background: #3498db; color: #fff; width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.btn-primary:hover { background: #2980b9; }
+.toggle-auth { margin-top: 15px; font-size: 0.9rem; }
+.toggle-auth a { color: #3498db; text-decoration: none; font-weight: bold; }
+        
     </style>
 </head>
 <body>
 
+<!-- Modal Log Masuk / Pendaftaran -->
+<div id="authModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 id="modalTitle">Bina Salasilah Keluarga</h2>
+        <p id="modalDesc">Daftar sekarang untuk terima 10 Kredit Kotak secara percuma.</p>
+        
+        <form id="authForm">
+            <!-- Ruangan Nama (Hanya papar ketika daftar) -->
+            <div class="input-group" id="groupNama">
+                <label for="inputNama">Nama Family Tree</label>
+                <input type="text" id="inputNama" placeholder="Cth: Keluarga Haji Ahmad">
+            </div>
+            
+            <div class="input-group">
+                <label for="inputEmel">Emel</label>
+                <input type="email" id="inputEmel" required placeholder="emel@anda.com">
+            </div>
+            
+            <div class="input-group">
+                <label for="inputKatalaluan">Kata Laluan</label>
+                <input type="password" id="inputKatalaluan" required placeholder="Min 6 aksara">
+            </div>
+            
+            <button type="submit" id="btnSubmit" class="btn-primary">Daftar Sekarang</button>
+        </form>
+        
+        <div class="toggle-auth">
+            <span id="toggleText">Sudah ada akaun?</span> 
+            <a href="#" id="btnToggleAuth" onclick="tukarModAuth()">Log Masuk di sini</a>
+        </div>
+    </div>
+</div>
+    
     <!-- Navigasi Utama -->
     <div class="top-bar">
         <div class="logo">FamiliPintar 🌳 <span id="treeNameDisplay">-</span></div>
@@ -94,6 +148,56 @@
                 // Logik masukkan data ke Firestore & lukis kotak baru akan diletakkan di sini
             }
         }
+
+let modPendaftaran = true;
+
+// Fungsi untuk tukar antara borang Daftar & Log Masuk
+function tukarModAuth() {
+    modPendaftaran = !modPendaftaran;
+    const groupNama = document.getElementById('groupNama');
+    const inputNama = document.getElementById('inputNama');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const toggleText = document.getElementById('toggleText');
+    const btnToggleAuth = document.getElementById('btnToggleAuth');
+
+    if (modPendaftaran) {
+        groupNama.style.display = 'block';
+        inputNama.required = true;
+        btnSubmit.innerText = "Daftar Sekarang";
+        modalTitle.innerText = "Bina Salasilah Keluarga";
+        modalDesc.innerText = "Daftar sekarang untuk terima 10 Kredit Kotak secara percuma.";
+        toggleText.innerText = "Sudah ada akaun?";
+        btnToggleAuth.innerText = "Log Masuk di sini";
+    } else {
+        groupNama.style.display = 'none';
+        inputNama.required = false;
+        btnSubmit.innerText = "Log Masuk";
+        modalTitle.innerText = "Log Masuk";
+        modalDesc.innerText = "Sambung bina salasilah keluarga anda.";
+        toggleText.innerText = "Belum ada akaun?";
+        btnToggleAuth.innerText = "Daftar di sini";
+    }
+}
+
+// Tangkap 'submit' dan hantar ke fungsi di app.js
+document.getElementById('authForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Halang page dari refresh
+    
+    const emel = document.getElementById('inputEmel').value;
+    const laluan = document.getElementById('inputKatalaluan').value;
+    
+    if (modPendaftaran) {
+        const nama = document.getElementById('inputNama').value;
+        // Panggil fungsi global dari app.js
+        if(window.daftarPengguna) window.daftarPengguna(emel, laluan, nama);
+    } else {
+        // Logik untuk log masuk (anda perlu tambah window.logMasuk di app.js)
+        if(window.logMasuk) window.logMasuk(emel, laluan);
+    }
+});
+        
     </script>
 </body>
 </html>
