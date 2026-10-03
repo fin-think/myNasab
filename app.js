@@ -150,41 +150,40 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             const canvas = document.getElementById('treeCanvas');
             const kotakInduk = document.getElementById(idKotakInduk);
             
-            // Dapatkan koordinat (posisi) kotak asal yang diklik
             let topInduk = parseInt(kotakInduk.style.top);
             let leftInduk = parseInt(kotakInduk.style.left);
 
-            // Tentukan kedudukan kotak baharu berdasarkan jenis
             let topBaru = topInduk;
             let leftBaru = leftInduk;
 
-            if (jenisKotak === 'parent') { topBaru -= 250; }     // Naik ke atas
-            if (jenisKotak === 'child') { topBaru += 250; }      // Turun ke bawah
-            if (jenisKotak === 'spouse') { leftBaru += 250; }    // Gerak ke kanan
+            // Tambah sedikit anjakan rawak supaya kotak tak bertindih 100% jika ditekan banyak kali
+            let anjakKiriKanan = Math.floor(Math.random() * 160) - 80; // Anjak antara -80px ke 80px
 
-            // Cipta elemen HTML (div) untuk kotak baharu
+            if (jenisKotak === 'parent') { topBaru -= 260; leftBaru += anjakKiriKanan; } 
+            if (jenisKotak === 'child') { topBaru += 260; leftBaru += anjakKiriKanan; }  
+            if (jenisKotak === 'spouse') { leftBaru += 280; } // Pasangan biasa di sebelah kanan terus
+
             const kotakBaru = document.createElement('div');
             kotakBaru.className = 'node-card';
-            kotakBaru.id = refKotakBaru.id; // Gunakan ID dari pangkalan data
+            kotakBaru.id = refKotakBaru.id;
             kotakBaru.style.top = topBaru + 'px';
             kotakBaru.style.left = leftBaru + 'px';
 
-            // Masukkan butang dan teks ke dalam kotak baharu
+            // Jadikan teks nama boleh diklik (cursor: pointer)
             kotakBaru.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 10px; color: #e74c3c;">Ahli Baru</div>
+                <div id="nama_${refKotakBaru.id}" onclick="bukaProfil('${refKotakBaru.id}')" style="font-weight: bold; margin-bottom: 10px; color: #2980b9; cursor: pointer; text-decoration: underline;">
+                    Ahli Baru (Klik Edit)
+                </div>
                 <button class="add-btn add-top" onclick="tambahKotak('parent', '${refKotakBaru.id}')">+</button>
                 <button class="add-btn add-right" onclick="tambahKotak('spouse', '${refKotakBaru.id}')">+</button>
                 <button class="add-btn add-bottom" onclick="tambahKotak('child', '${refKotakBaru.id}')">+</button>
             `;
 
-            // Tampal kotak baharu ke atas kanvas
             canvas.appendChild(kotakBaru);
+            
+            // Terus buka borang profil bila kotak baharu tercipta
+            window.bukaProfil(refKotakBaru.id);
             // ==========================================
-        }
-    } catch (error) {
-        alert("Gagal memproses transaksi: " + error.message);
-    }
-};
 
 // ==========================================
 // FUNGSI LOG KELUAR
@@ -198,3 +197,46 @@ window.logKeluar = async () => {
         console.error("Ralat log keluar:", error);
     }
 };
+
+// ==========================================
+// FUNGSI KEMAS KINI PROFIL AHLI (NAMA & LOKASI)
+// ==========================================
+window.bukaProfil = (idKotak) => {
+    // Masukkan ID kotak ke dalam form supaya sistem tahu kotak mana nak diupdate
+    document.getElementById('editNodeId').value = idKotak;
+    document.getElementById('editNama').value = ""; // Kosongkan form
+    document.getElementById('editLokasi').value = "";
+    
+    // Tunjukkan Modal Profil
+    document.getElementById('profilModal').style.display = 'flex';
+};
+
+// Fungsi ini dipanggil bila borang profil ditekan "Simpan Profil"
+document.getElementById('profilForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); // Halang page dari refresh
+    
+    const idKotak = document.getElementById('editNodeId').value;
+    const namaBaru = document.getElementById('editNama').value;
+    const lokasiBaru = document.getElementById('editLokasi').value;
+    
+    try {
+        // 1. Simpan (Update) data ke dalam Firestore
+        const refKotak = doc(db, "mynasab_nodes", idKotak);
+        await updateDoc(refKotak, {
+            name: namaBaru,
+            city: lokasiBaru
+        });
+        
+        // 2. Tukar nama pada kotak di skrin supaya pengguna terus nampak perubahan
+        document.getElementById('nama_' + idKotak).innerText = namaBaru;
+        document.getElementById('nama_' + idKotak).style.textDecoration = "none"; // Buang garisan underline lepas dah edit
+        document.getElementById('nama_' + idKotak).style.color = "#2c3e50";
+        
+        // 3. Tutup modal
+        document.getElementById('profilModal').style.display = 'none';
+        
+    } catch (error) {
+        alert("Gagal menyimpan profil: " + error.message);
+    }
+});
+      
