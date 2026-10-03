@@ -146,12 +146,20 @@
     <!-- Firebase SDK (Modular V9) dimuatkan di sini kelak -->
     <script type="module" src="app.js"></script>
     <script>
-        // Logik Seret (Drag/Pan) untuk Infinite Canvas
+        // ==========================================
+        // 1. LOGIK SERET KANVAS (DRAG & PAN)
+        // ==========================================
         const container = document.getElementById('panContainer');
         let isDragging = false, startX, startY, scrollLeft, scrollTop;
 
+        // Auto-Fokus ke tengah (Kotak Diri Sendiri) apabila skrin dimuatkan
+        window.addEventListener('load', () => {
+            container.scrollLeft = 2500 - (window.innerWidth / 2) + 100;
+            container.scrollTop = 2500 - (window.innerHeight / 2) + 100;
+        });
+
         container.addEventListener('mousedown', (e) => {
-            if (e.target.tagName === 'BUTTON') return; // Jangan drag kalau klik butang
+            if (e.target.tagName === 'BUTTON') return; 
             isDragging = true;
             container.style.cursor = 'grabbing';
             startX = e.pageX - container.offsetLeft;
@@ -171,95 +179,75 @@
             container.scrollTop = scrollTop - (y - startY);
         });
 
-        // Simulasi Logik Penolakan Wallet
-        let bakiKredit = 10; // Akan ditarik dari Firebase nanti
-        document.getElementById('creditBalance').innerText = bakiKredit;
+        // ==========================================
+        // 2. LOGIK KAWALAN MODAL (BORANG)
+        // ==========================================
+        let modPendaftaran = true;
 
-        function tambahKotak(jenis, parentId) {
-            if (bakiKredit <= 0) {
-                alert("Baki kredit tidak mencukupi. Sila Top-Up Pakej RM5/RM10/RM20.");
-                return;
+        function bukaModal(jenis) {
+            document.getElementById('welcomeScreen').style.display = 'none'; 
+            document.getElementById('authModal').style.display = 'flex';     
+            
+            if (jenis === 'daftar') {
+                modPendaftaran = true;
+            } else {
+                modPendaftaran = false;
             }
-            if(confirm(`Gunakan 1 kredit untuk tambah kotak ${jenis}?`)) {
-                bakiKredit -= 1;
-                document.getElementById('creditBalance').innerText = bakiKredit;
-                alert(`Kotak ${jenis} berjaya ditambah! Borang profil akan muncul.`);
-                // Logik masukkan data ke Firestore & lukis kotak baru akan diletakkan di sini
+            kemaskiniPaparanModal();
+        }
+
+        function tutupModal() {
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('welcomeScreen').style.display = 'flex';
+        }
+                
+        function tukarModAuth() {
+            modPendaftaran = !modPendaftaran;
+            kemaskiniPaparanModal();
+        }
+
+        function kemaskiniPaparanModal() {
+            const groupNama = document.getElementById('groupNama');
+            const inputNama = document.getElementById('inputNama');
+            const btnSubmit = document.getElementById('btnSubmit');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDesc = document.getElementById('modalDesc');
+            const toggleText = document.getElementById('toggleText');
+            const btnToggleAuth = document.getElementById('btnToggleAuth');
+
+            if (modPendaftaran) {
+                groupNama.style.display = 'block';
+                inputNama.required = true;
+                btnSubmit.innerText = "Daftar Sekarang";
+                modalTitle.innerText = "Bina Salasilah Keluarga";
+                modalDesc.innerText = "Daftar sekarang untuk terima 10 Kredit Kotak secara percuma.";
+                toggleText.innerText = "Sudah ada akaun?";
+                btnToggleAuth.innerText = "Log Masuk di sini";
+            } else {
+                groupNama.style.display = 'none';
+                inputNama.required = false;
+                btnSubmit.innerText = "Log Masuk";
+                modalTitle.innerText = "Log Masuk";
+                modalDesc.innerText = "Sambung bina salasilah keluarga anda.";
+                toggleText.innerText = "Belum ada akaun?";
+                btnToggleAuth.innerText = "Daftar di sini";
             }
         }
 
-let modPendaftaran = true;
-
-// Fungsi butang dari halaman utama
-function bukaModal(jenis) {
-    document.getElementById('welcomeScreen').style.display = 'none'; // <-- TAMBAH BARIS INI (Sembunyikan Welcome Screen)
-    document.getElementById('authModal').style.display = 'flex';     // Munculkan modal borang
-    
-    if (jenis === 'daftar') {
-        modPendaftaran = true;
-    } else {
-        modPendaftaran = false;
-    }
-    kemaskiniPaparanModal();
-}
-
-function tutupModal() {
-    document.getElementById('authModal').style.display = 'none';
-    document.getElementById('welcomeScreen').style.display = 'flex';
-}
-        
-// Fungsi jika pengguna klik "Sudah ada akaun/Belum ada akaun" di dalam modal
-function tukarModAuth() {
-    modPendaftaran = !modPendaftaran;
-    kemaskiniPaparanModal();
-}
-
-// Logik untuk tukar paparan (diasingkan supaya lebih kemas)
-function kemaskiniPaparanModal() {
-    const groupNama = document.getElementById('groupNama');
-    const inputNama = document.getElementById('inputNama');
-    const btnSubmit = document.getElementById('btnSubmit');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalDesc = document.getElementById('modalDesc');
-    const toggleText = document.getElementById('toggleText');
-    const btnToggleAuth = document.getElementById('btnToggleAuth');
-
-    if (modPendaftaran) {
-        groupNama.style.display = 'block';
-        inputNama.required = true;
-        btnSubmit.innerText = "Daftar Sekarang";
-        modalTitle.innerText = "Bina Salasilah Keluarga";
-        modalDesc.innerText = "Daftar sekarang untuk terima 10 Kredit Kotak secara percuma.";
-        toggleText.innerText = "Sudah ada akaun?";
-        btnToggleAuth.innerText = "Log Masuk di sini";
-    } else {
-        groupNama.style.display = 'none';
-        inputNama.required = false;
-        btnSubmit.innerText = "Log Masuk";
-        modalTitle.innerText = "Log Masuk";
-        modalDesc.innerText = "Sambung bina salasilah keluarga anda.";
-        toggleText.innerText = "Belum ada akaun?";
-        btnToggleAuth.innerText = "Daftar di sini";
-    }
-}
-
-// Tangkap 'submit' dan hantar ke fungsi di app.js
-document.getElementById('authForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Halang page dari refresh
-    
-    const emel = document.getElementById('inputEmel').value;
-    const laluan = document.getElementById('inputKatalaluan').value;
-    
-    if (modPendaftaran) {
-        const nama = document.getElementById('inputNama').value;
-        // Panggil fungsi global dari app.js
-        if(window.daftarPengguna) window.daftarPengguna(emel, laluan, nama);
-    } else {
-        // Logik untuk log masuk (anda perlu tambah window.logMasuk di app.js)
-        if(window.logMasuk) window.logMasuk(emel, laluan);
-    }
-});
-        
+        // Tangkap 'submit' dan hantar ke fungsi Firebase di app.js
+        document.getElementById('authForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            
+            const emel = document.getElementById('inputEmel').value;
+            const laluan = document.getElementById('inputKatalaluan').value;
+            
+            if (modPendaftaran) {
+                const nama = document.getElementById('inputNama').value;
+                if(window.daftarPengguna) window.daftarPengguna(emel, laluan, nama);
+            } else {
+                if(window.logMasuk) window.logMasuk(emel, laluan);
+            }
+        });
     </script>
 </body>
 </html>
