@@ -119,6 +119,29 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Profil Ahli (Untuk Isi Nama) -->
+<div id="profilModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h2 style="margin-bottom: 15px;">Profil Ahli</h2>
+        <form id="profilForm">
+            <input type="hidden" id="editNodeId"> <!-- Simpan ID Kotak secara rahsia -->
+            
+            <div class="input-group">
+                <label>Nama Penuh</label>
+                <input type="text" id="editNama" required placeholder="Cth: Ahmad Bin Ali">
+            </div>
+            
+            <div class="input-group">
+                <label>Lokasi / Negeri</label>
+                <input type="text" id="editLokasi" placeholder="Cth: Shah Alam, Selangor">
+            </div>
+            
+            <button type="submit" class="btn-primary" style="background-color: #27ae60;">Simpan Profil</button>
+            <button type="button" onclick="document.getElementById('profilModal').style.display='none'" style="background:transparent; border:none; color:#7f8c8d; width:100%; margin-top:10px; cursor:pointer;">Batal</button>
+        </form>
+    </div>
+</div>
     
     <!-- Navigasi Utama -->
     <div class="top-bar">
