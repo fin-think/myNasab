@@ -43,13 +43,49 @@
 .btn-primary:hover { background: #2980b9; }
 .toggle-auth { margin-top: 15px; font-size: 0.9rem; }
 .toggle-auth a { color: #3498db; text-decoration: none; font-weight: bold; }
+
+/* Gaya Halaman Utama (Welcome Screen) */
+.welcome-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #e0eafc, #cfdef3); /* Latar belakang gradient lembut */
+    z-index: 10000; /* Paling atas */
+    display: flex; justify-content: center; align-items: center;
+}
+.welcome-content {
+    background: #fff; padding: 50px 40px; border-radius: 15px;
+    text-align: center; max-width: 500px; width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.welcome-content h1 { margin-top: 0; color: #2c3e50; font-size: 2.2rem; margin-bottom: 5px;}
+.welcome-content p { font-size: 1.2rem; color: #7f8c8d; margin-bottom: 30px; font-style: italic; }
+.welcome-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.btn-secondary { 
+    background: #ecf0f1; color: #2c3e50; width: 100%; padding: 12px; 
+    border: none; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 1; min-width: 140px;
+}
+.btn-secondary:hover { background: #bdc3c7; }
+.welcome-buttons .btn-primary { flex: 1; margin-top: 0; min-width: 140px;}
+
         
     </style>
 </head>
 <body>
 
+    <!-- Halaman Utama (Welcome Screen) -->
+    <div id="welcomeScreen" class="welcome-overlay">
+        <div class="welcome-content">
+            <h1>Selamat Datang ke myNasab</h1>
+            <p>"Akar Kita, Cerita Kita"</p>
+            <div class="welcome-buttons">
+                <button class="btn-primary" onclick="bukaModal('daftar')">Daftar Akaun</button>
+                <button class="btn-secondary" onclick="bukaModal('login')">Log Masuk</button>
+            </div>
+        </div>
+    </div>
+
+
 <!-- Modal Log Masuk / Pendaftaran -->
-<div id="authModal" class="modal-overlay">
+<div id="authModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
         <h2 id="modalTitle">Bina Salasilah Keluarga</h2>
         <p id="modalDesc">Daftar sekarang untuk terima 10 Kredit Kotak secara percuma.</p>
@@ -151,9 +187,25 @@
 
 let modPendaftaran = true;
 
-// Fungsi untuk tukar antara borang Daftar & Log Masuk
+// Fungsi butang dari halaman utama
+function bukaModal(jenis) {
+    document.getElementById('authModal').style.display = 'flex'; // Munculkan modal borang
+    if (jenis === 'daftar') {
+        modPendaftaran = true;
+    } else {
+        modPendaftaran = false;
+    }
+    kemaskiniPaparanModal();
+}
+
+// Fungsi jika pengguna klik "Sudah ada akaun/Belum ada akaun" di dalam modal
 function tukarModAuth() {
     modPendaftaran = !modPendaftaran;
+    kemaskiniPaparanModal();
+}
+
+// Logik untuk tukar paparan (diasingkan supaya lebih kemas)
+function kemaskiniPaparanModal() {
     const groupNama = document.getElementById('groupNama');
     const inputNama = document.getElementById('inputNama');
     const btnSubmit = document.getElementById('btnSubmit');
