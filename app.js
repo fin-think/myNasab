@@ -170,6 +170,7 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             const kotakBaru = document.createElement('div');
             kotakBaru.className = 'node-card';
             kotakBaru.id = refKotakBaru.id;
+            kotakBaru.setAttribute('data-parent', idKotakInduk);
             kotakBaru.style.top = topBaru + 'px';
             kotakBaru.style.left = leftBaru + 'px';
 
@@ -184,6 +185,7 @@ window.tambahKotak = async (jenisKotak, idKotakInduk) => {
             `;
 
             canvas.appendChild(kotakBaru);
+            window.lukisSemuaGarisan();
             
             // Terus buka borang profil bila kotak baharu tercipta
             window.bukaProfil(refKotakBaru.id);
@@ -275,6 +277,7 @@ window.muatTurunSalasilah = async () => {
             const kotakBaru = document.createElement('div');
             kotakBaru.className = 'node-card';
             kotakBaru.id = idKotak;
+            kotakBaru.setAttribute('data-parent', data.parent_node_id); // Tag rujukan parent
             
             // Guna koordinat dari database. Kalau takde (data lama), letak kat tengah (2500px)
             kotakBaru.style.top = (data.pos_y || 2500) + 'px';
@@ -296,8 +299,57 @@ window.muatTurunSalasilah = async () => {
             
             canvas.appendChild(kotakBaru);
         });
-        
+
+// Lukis garisan selepas semua kotak berjaya dimuat turun
+    setTimeout(() => window.lukisSemuaGarisan(), 500);
+      
     } catch (error) {
         console.error("Gagal memuat turun salasilah:", error);
     }
 };
+
+// ==========================================
+// FUNGSI LUKIS GARISAN PENYAMBUNG (SVG)
+// ==========================================
+window.lukisSemuaGarisan = () => {
+    const svg = document.getElementById('canvasLines');
+    if (!svg) return;
+    
+    svg.innerHTML = ''; // Padam garisan lama sebelum lukis semula
+    
+    const semuaKotak = document.querySelectorAll('.node-card');
+    
+    semuaKotak.forEach(kotak => {
+        const parentId = kotak.getAttribute('data-parent');
+        
+        if (parentId && parentId !== "undefined") {
+            const kotakInduk = document.getElementById(parentId);
+            
+            if (kotakInduk) {
+                // Kira titik tengah kotak induk (parent)
+                const pTop = parseInt(kotakInduk.style.top);
+                const pLeft = parseInt(kotakInduk.style.left);
+                const pCenterX = pLeft + 115; // Lebar kad + padding
+                const pCenterY = pTop + (kotakInduk.offsetHeight / 2) || pTop + 50; 
+                
+                // Kira titik tengah kotak ini (child)
+                const cTop = parseInt(kotak.style.top);
+                const cLeft = parseInt(kotak.style.left);
+                const cCenterX = cLeft + 115;
+                const cCenterY = cTop + (kotak.offsetHeight / 2) || cTop + 50;
+                
+                // Cipta garisan menggunakan SVG
+                const garisan = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                garisan.setAttribute('x1', pCenterX);
+                garisan.setAttribute('y1', pCenterY);
+                garisan.setAttribute('x2', cCenterX);
+                garisan.setAttribute('y2', cCenterY);
+                garisan.setAttribute('stroke', '#95a5a6'); // Warna kelabu
+                garisan.setAttribute('stroke-width', '3'); // Ketebalan garisan
+                
+                // Masukkan ke dalam kanvas SVG
+                svg.appendChild(garisan);
+            }
+        }
+    });
+};      
