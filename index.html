@@ -88,6 +88,55 @@
         </div>
     </div>
 
+<!-- Modal Tambah Ahli -->
+    <div id="modalTambahAhli" class="modal-overlay hidden">
+        <div class="modal-box" style="max-height: 85vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 15px; color: #2c3e50;">Tambah Ahli Keluarga</h2>
+            <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 20px;">Sila isi butiran ahli keluarga baharu di bawah.</p>
+            
+            <form id="formTambahAhli">
+                <div class="input-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" id="tambahNama" required placeholder="Cth: Ahmad Bin Ali">
+                </div>
+                
+                <div class="input-group">
+                    <label>Hubungan (dengan anda)</label>
+                    <select id="tambahHubungan" required>
+                        <option value="">-- Pilih Hubungan --</option>
+                        <option value="Ayah">Ayah (Percuma)</option>
+                        <option value="Ibu">Ibu (Percuma)</option>
+                        <option value="Suami">Suami (Percuma)</option>
+                        <option value="Isteri">Isteri (Percuma)</option>
+                        <option value="Anak">Anak (Tolak 1 Kredit)</option>
+                        <option value="Bapa Mertua">Bapa Mertua (Bina Cabang Baru - Tolak 5 Kredit)</option>
+                        <option value="Ibu Mertua">Ibu Mertua (Bina Cabang Baru - Tolak 5 Kredit)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>No. Telefon</label>
+                        <input type="tel" id="tambahTelefon" placeholder="Pilihan">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>Lokasi (Bandar)</label>
+                        <input type="text" id="tambahLokasi" placeholder="Pilihan">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Gambar Profil (Kosmetik)</label>
+                    <input type="file" id="tambahGambar" accept="image/*" disabled title="Fungsi premium ini akan diaktifkan kelak">
+                    <small style="color: #e67e22; font-weight: bold;">*Fungsi muat naik gambar & AI akan diaktifkan dalam fasa kemas kini premium kelak.</small>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="background-color: #27ae60; margin-top: 15px;">Simpan Ahli</button>
+                <button type="button" onclick="tutupModalBorang()" style="background:transparent; border:none; color:#7f8c8d; width:100%; margin-top:10px; cursor:pointer;">Batal</button>
+            </form>
+        </div>
+    </div>
+    
     <!-- Antaramuka Utama (Hanya muncul lepas login) -->
     <div id="dashboardUtama" class="hidden">
         
@@ -185,10 +234,28 @@
             }
         });
         
-        // Placeholder fungsi buka borang tambah ahli
+        // Fungsi Buka & Tutup Borang Tambah Ahli
         function bukaModalBorang() {
-            alert("Borang kemasukan data (dengan ciri muat naik gambar & kosmetik) akan dipaparkan di sini.");
+            document.getElementById('modalTambahAhli').classList.remove('hidden');
         }
+
+        function tutupModalBorang() {
+            document.getElementById('modalTambahAhli').classList.add('hidden');
+            document.getElementById('formTambahAhli').reset();
+        }
+
+        // Tangkap isian borang dan hantar ke app.js
+        document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nama = document.getElementById('tambahNama').value;
+            const hubungan = document.getElementById('tambahHubungan').value;
+            const telefon = document.getElementById('tambahTelefon').value;
+            const lokasi = document.getElementById('tambahLokasi').value;
+            
+            if(window.tambahAhliBaru) {
+                window.tambahAhliBaru(nama, hubungan, telefon, lokasi);
+            }
+        });
     </script>
 </body>
 </html>
