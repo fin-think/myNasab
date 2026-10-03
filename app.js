@@ -149,3 +149,52 @@ window.padamAhli = async (idAhli) => {
         }
     }
 };
+
+// --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT) ---
+window.tambahAhliBaru = async (nama, hubungan, telefon, lokasi) => {
+    if (!penggunaSemasa) return;
+    const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
+    
+    try {
+        const snapPengguna = await getDoc(refPengguna);
+        const bakiTerkini = snapPengguna.data().credit_balance;
+        
+        // Tetapkan harga kredit berdasarkan hubungan
+        let kosKredit = 0;
+        if (hubungan === "Anak") kosKredit = 1;
+        if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit = 5;
+        
+        // Semak jika kredit cukup
+        if (bakiTerkini < kosKredit) {
+            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit untuk menambah ${hubungan}. Sila tambah nilai.`);
+            return;
+        }
+        
+        // Tolak kredit di database jika ia bukan percuma
+        if (kosKredit > 0) {
+            await updateDoc(refPengguna, { credit_balance: increment(-kosKredit) });
+            document.getElementById('creditBalance').innerText = bakiTerkini - kosKredit;
+        }
+        
+        // Simpan data ahli ke Firestore
+        await addDoc(collection(db, "mynasab_nodes"), {
+            owner_uid: penggunaSemasa.uid,
+            name: nama,
+            relationship: hubungan,
+            phone: telefon,
+            city: lokasi,
+            is_root: false, // Hanya 'Diri Sendiri' yang memegang status True
+            created_at: new Date()
+        });
+        
+        // Tutup borang & refresh jadual
+        alert(`${nama} berjaya ditambah sebagai ${hubungan}!`);
+        document.getElementById('modalTambahAhli').classList.add('hidden');
+        document.getElementById('formTambahAhli').reset();
+        
+        window.muatTurunSalasilah(); 
+        
+    } catch (error) {
+        alert("Gagal menambah ahli: " + error.message);
+    }
+};
