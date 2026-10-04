@@ -65,7 +65,7 @@ window.logMasuk = async (emel, kataLaluan) => {
     }
 };
 
-window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
+window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
     try {
         const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
         const user = kredensial.user;
@@ -82,6 +82,7 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga) => {
             owner_uid: user.uid,
             name: namaKeluarga,
             relationship: "Diri Sendiri (Induk)",
+            gender: jantina,
             is_root: true,
             created_at: new Date()
         });
@@ -162,7 +163,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => {
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, jantina) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
@@ -192,6 +193,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => 
             phone: telefon,
             city: bandar,
             state: negeri,
+            gender: jantina,
             is_root: false,
             created_at: new Date()
         });
@@ -220,6 +222,7 @@ window.bukaModalEdit = async (idKotak) => {
             document.getElementById('editAhliTelefon').value = data.phone || "";
             document.getElementById('editAhliBandar').value = data.city || "";
             document.getElementById('editAhliNegeri').value = data.state || "";
+            document.getElementById('editAhliJantina').value = data.gender || "";
             
             // Logik Khas: Jika ini 'Diri Sendiri', benarkan dia edit Nama Akaun Keluarga
             const groupAkaun = document.getElementById('groupEditAkaun');
@@ -263,6 +266,7 @@ if(formEdit) {
                 phone: document.getElementById('editAhliTelefon').value,
                 city: document.getElementById('editAhliBandar').value,
                 state: document.getElementById('editAhliNegeri').value,
+                gender: document.getElementById('editAhliJantina').value,
                 updated_at: new Date()
             });
             
@@ -304,13 +308,13 @@ window.bukaPreview = async () => {
         // 2. Pembina Kad MyHeritage
         const binaKotak = (ahli, kategory) => {
             // Tentukan jantina/warna secara logik melalui gelaran hubungan
-            let tema = 'theme-neutral'; 
-            let hub = ahli.relationship.toLowerCase();
-            
-            if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) {
-                tema = 'theme-lelaki';
-            } else if (hub.includes('ibu') || hub.includes('isteri')) {
-                tema = 'theme-perempuan';
+                        let tema = 'theme-neutral';
+            const hub = (ahli.relationship || '').toLowerCase();
+
+            if (ahli.gender === 'L') tema = 'theme-lelaki';
+            else if (ahli.gender === 'P') tema = 'theme-perempuan';
+            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) tema = 'theme-lelaki';   // fallback data lama
+            else if (hub.includes('ibu') || hub.includes('isteri')) tema = 'theme-perempuan';
             } else if (kategory === 'diri' || hub.includes('anak')) {
                 tema = 'theme-neutral'; // Jika tiada set jantina khusus, guna hijau
             }
@@ -385,3 +389,14 @@ window.bukaPreview = async () => {
     }
 };
 
+window.tukarSaizKertas = () => {
+    const saiz = document.getElementById('pilihanSaizKertas').value;
+    let st = document.getElementById('stylePage');
+    if (!st) { st = document.createElement('style'); st.id = 'stylePage'; document.head.appendChild(st); }
+    st.textContent = `@page { size: ${saiz} landscape; margin: 10mm; }`;
+};
+
+window.cetakSalasilah = () => {
+    window.tukarSaizKertas();
+    window.print();
+};
