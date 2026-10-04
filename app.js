@@ -311,11 +311,23 @@ window.bukaPreview = async () => {
                         let tema = 'theme-neutral';
             const hub = (ahli.relationship || '').toLowerCase();
 
-            if (ahli.gender === 'L') tema = 'theme-lelaki';
-            else if (ahli.gender === 'P') tema = 'theme-perempuan';
-            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) tema = 'theme-lelaki';   // fallback data lama
-            else if (hub.includes('ibu') || hub.includes('isteri')) tema = 'theme-perempuan';
-            } else if (kategory === 'diri' || hub.includes('anak')) {
+            // Tentukan jantina/warna secara logik
+            let tema = 'theme-neutral'; // Set default hijau awal-awal
+            let hub = ahli.relationship.toLowerCase();
+            
+            if (ahli.gender === 'L') {
+                tema = 'theme-lelaki';
+            } 
+            else if (ahli.gender === 'P') {
+                tema = 'theme-perempuan';
+            } 
+            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) {
+                tema = 'theme-lelaki';   // fallback data lama
+            } 
+            else if (hub.includes('ibu') || hub.includes('isteri')) {
+                tema = 'theme-perempuan';
+            } 
+            else if (kategory === 'diri' || hub.includes('anak')) {
                 tema = 'theme-neutral'; // Jika tiada set jantina khusus, guna hijau
             }
 
