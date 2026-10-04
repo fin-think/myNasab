@@ -162,7 +162,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT) ---
-window.tambahAhliBaru = async (nama, hubungan, telefon, lokasi) => {
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
@@ -170,39 +170,35 @@ window.tambahAhliBaru = async (nama, hubungan, telefon, lokasi) => {
         const snapPengguna = await getDoc(refPengguna);
         const bakiTerkini = snapPengguna.data().credit_balance;
         
-        // Tetapkan harga kredit berdasarkan hubungan
         let kosKredit = 0;
         if (hubungan === "Anak") kosKredit = 1;
         if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit = 5;
         
-        // Semak jika kredit cukup
         if (bakiTerkini < kosKredit) {
-            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit untuk menambah ${hubungan}. Sila tambah nilai.`);
+            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit. Sila tambah nilai.`);
             return;
         }
         
-        // Tolak kredit di database jika ia bukan percuma
         if (kosKredit > 0) {
             await updateDoc(refPengguna, { credit_balance: increment(-kosKredit) });
             document.getElementById('creditBalance').innerText = bakiTerkini - kosKredit;
         }
         
-        // Simpan data ahli ke Firestore
         await addDoc(collection(db, "mynasab_nodes"), {
             owner_uid: penggunaSemasa.uid,
             name: nama,
             relationship: hubungan,
+            dob: dob,
             phone: telefon,
-            city: lokasi,
-            is_root: false, // Hanya 'Diri Sendiri' yang memegang status True
+            city: bandar,
+            state: negeri,
+            is_root: false,
             created_at: new Date()
         });
         
-        // Tutup borang & refresh jadual
-        alert(`${nama} berjaya ditambah sebagai ${hubungan}!`);
+        alert(`${nama} berjaya ditambah!`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
-        
         window.muatTurunSalasilah(); 
         
     } catch (error) {
@@ -213,19 +209,29 @@ window.tambahAhliBaru = async (nama, hubungan, telefon, lokasi) => {
 // --- 6. FUNGSI KEMASKINI PROFIL AHLI (EDIT) ---
 window.bukaModalEdit = async (idKotak) => {
     try {
-        // Tarik data profil ahli ini dari database
         const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // Masukkan data ke dalam borang edit
             document.getElementById('editAhliId').value = idKotak;
             document.getElementById('editAhliNama').value = data.name || "";
             document.getElementById('editAhliHubungan').value = data.relationship || "";
+            document.getElementById('editAhliDob').value = data.dob || "";
             document.getElementById('editAhliTelefon').value = data.phone || "";
-            document.getElementById('editAhliLokasi').value = data.city || "";
+            document.getElementById('editAhliBandar').value = data.city || "";
+            document.getElementById('editAhliNegeri').value = data.state || "";
             
-            // Paparkan borang
+            // Logik Khas: Jika ini 'Diri Sendiri', benarkan dia edit Nama Akaun Keluarga
+            const groupAkaun = document.getElementById('groupEditAkaun');
+            if (data.is_root) {
+                groupAkaun.classList.remove('hidden');
+                // Tarik nama akaun dari data pengguna (user)
+                const snapPengguna = await getDoc(doc(db, "mynasab_users", penggunaSemasa.uid));
+                document.getElementById('editAkaunKeluarga').value = snapPengguna.data().name || "";
+            } else {
+                groupAkaun.classList.add('hidden');
+            }
+            
             document.getElementById('modalEditAhli').classList.remove('hidden');
         }
     } catch (error) {
@@ -233,28 +239,36 @@ window.bukaModalEdit = async (idKotak) => {
     }
 };
 
-// Logik menyimpan data yang telah di-edit
 const formEdit = document.getElementById('formEditAhli');
 if(formEdit) {
     formEdit.addEventListener('submit', async (e) => {
         e.preventDefault();
         const idKotak = document.getElementById('editAhliId').value;
-        const namaBaru = document.getElementById('editAhliNama').value;
-        const telefonBaru = document.getElementById('editAhliTelefon').value;
-        const lokasiBaru = document.getElementById('editAhliLokasi').value;
+        const groupAkaun = document.getElementById('groupEditAkaun');
         
         try {
-            // Update data ke Firestore
+            // Jika Diri Sendiri diedit, kita kemas kini Nama Akaun Keluarga di database berasingan
+            if (!groupAkaun.classList.contains('hidden')) {
+                const namaAkaunBaru = document.getElementById('editAkaunKeluarga').value;
+                await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), {
+                    name: namaAkaunBaru
+                });
+                document.getElementById('treeNameDisplay').innerText = namaAkaunBaru; // Kemaskini nama di atas penjuru kanan
+            }
+
+            // Kemas kini data Individu
             await updateDoc(doc(db, "mynasab_nodes", idKotak), {
-                name: namaBaru,
-                phone: telefonBaru,
-                city: lokasiBaru,
+                name: document.getElementById('editAhliNama').value,
+                dob: document.getElementById('editAhliDob').value,
+                phone: document.getElementById('editAhliTelefon').value,
+                city: document.getElementById('editAhliBandar').value,
+                state: document.getElementById('editAhliNegeri').value,
                 updated_at: new Date()
             });
             
             alert("Profil berjaya dikemas kini!");
             document.getElementById('modalEditAhli').classList.add('hidden');
-            window.muatTurunSalasilah(); // Refresh jadual supaya nama baru dipaparkan
+            window.muatTurunSalasilah(); 
             
         } catch (error) {
             alert("Gagal mengemas kini profil: " + error.message);
