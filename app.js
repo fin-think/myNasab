@@ -276,13 +276,12 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (PREMIUM) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
-    // Tunjukkan skrin preview
     document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang menyusun data...</p>';
+    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok salasilah...</p>';
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -294,7 +293,7 @@ window.bukaPreview = async () => {
         let ibuBapa = [];
         let anakAnak = [];
 
-        // 1. Asingkan data mengikut tahap generasi (Tingkat)
+        // 1. Kategorikan Data
         querySnapshot.forEach((docSnap) => {
             const d = docSnap.data();
             if (d.is_root) diriSendiri = d;
@@ -303,47 +302,67 @@ window.bukaPreview = async () => {
             else if (d.relationship === "Anak") anakAnak.push(d);
         });
 
-        // 2. Fungsi Pembantu untuk membina Kotak Ahli
-        const binaKotak = (ahli, warnaBorder) => {
+        // 2. Pembina Kad Premium
+        const binaKotak = (ahli, tema) => {
             let infoEkstra = '';
-            // Hanya tunjuk maklumat yang ada (jika diisi)
-            if (ahli.dob) infoEkstra += `<p class="info-teks">🎂 Lahir: ${ahli.dob}</p>`;
-            if (ahli.phone) infoEkstra += `<p class="info-teks">📞 ${ahli.phone}</p>`;
-            if (ahli.city || ahli.state) infoEkstra += `<p class="info-teks">📍 ${ahli.city || ''} ${ahli.state || ''}</p>`;
+            if (ahli.dob) infoEkstra += `<p>🎂 ${ahli.dob}</p>`;
+            if (ahli.phone) infoEkstra += `<p>📞 ${ahli.phone}</p>`;
+            if (ahli.city || ahli.state) infoEkstra += `<p>📍 ${ahli.city || ''} ${ahli.state || ''}</p>`;
 
             return `
-                <div class="node-smart" style="border-color: ${warnaBorder};">
-                    <span class="badge-hub">${ahli.relationship}</span>
+                <div class="node-card-premium theme-${tema}">
+                    <span class="badge">${ahli.relationship}</span>
                     <h4>${ahli.name}</h4>
                     ${infoEkstra}
                 </div>
             `;
         };
 
-        // 3. Susun HTML Auto-Layout (Tingkat Atas, Tengah, Bawah)
-        let htmlLayout = `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">`;
-        
-        // TINGKAT 1: Ibu Bapa & Mertua
+        // 3. Logik CSS Tree HTML
+        let htmlLayout = '<div class="tree"><ul>';
+
+        const renderDiriDanAnak = () => {
+            let str = `<li>`;
+            
+            // Cantumkan Diri Sendiri & Pasangan dengan garisan putus-putus (dashed)
+            const jumlahPasangan = pasangan.length + (diriSendiri ? 1 : 0);
+            const classCouple = jumlahPasangan > 1 ? "couple-box connected" : "couple-box";
+            
+            str += `<div class="${classCouple}">`;
+            if (diriSendiri) str += binaKotak(diriSendiri, 'diri');
+            pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
+            str += `</div>`;
+            
+            // Jika ada anak, buka cawangan baharu di bawah mereka
+            if (anakAnak.length > 0) {
+                str += `<ul>`;
+                anakAnak.forEach(anak => {
+                    str += `<li>${binaKotak(anak, 'anak')}</li>`;
+                });
+                str += `</ul>`;
+            }
+            str += `</li>`;
+            return str;
+        }
+
+        // Jika Ibu Bapa wujud, mereka adalah Akar (Root) utama
         if (ibuBapa.length > 0) {
-            htmlLayout += `<div class="hierarki-level garis-bawah">`;
-            ibuBapa.forEach(ib => htmlLayout += binaKotak(ib, "#9b59b6"));
+            htmlLayout += `<li>`;
+            const classCoupleIbuBapa = ibuBapa.length > 1 ? "couple-box connected" : "couple-box";
+            htmlLayout += `<div class="${classCoupleIbuBapa}">`;
+            ibuBapa.forEach(ib => htmlLayout += binaKotak(ib, 'ibubapa'));
             htmlLayout += `</div>`;
+            
+            htmlLayout += `<ul>`;
+            htmlLayout += renderDiriDanAnak(); // Masukkan keluarga anda di bawah Ibu Bapa
+            htmlLayout += `</ul>`;
+            htmlLayout += `</li>`;
+        } else {
+            // Jika tiada Ibu Bapa, anda adalah Akar (Root) utama
+            htmlLayout += renderDiriDanAnak();
         }
 
-        // TINGKAT 2: Diri Sendiri & Pasangan
-        htmlLayout += `<div class="hierarki-level">`;
-        if (diriSendiri) htmlLayout += binaKotak(diriSendiri, "#27ae60");
-        pasangan.forEach(p => htmlLayout += binaKotak(p, "#e67e22"));
-        htmlLayout += `</div>`;
-
-        // TINGKAT 3: Anak-anak
-        if (anakAnak.length > 0) {
-            htmlLayout += `<div class="hierarki-level garis-atas">`;
-            anakAnak.forEach(a => htmlLayout += binaKotak(a, "#f1c40f"));
-            htmlLayout += `</div>`;
-        }
-
-        htmlLayout += `</div>`;
+        htmlLayout += '</ul></div>';
         
         // Paparkan ke skrin
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
@@ -355,25 +374,18 @@ window.bukaPreview = async () => {
 
 // Fungsi Print & Format Saiz Kertas
 window.tukarSaizKertas = () => {
-    // Fungsi ini akan mengubah tetapan saiz masa (Inject CSS @page) sebelum butang print ditekan
     const saiz = document.getElementById('pilihanSaizKertas').value;
     let styleCetak = document.getElementById('gayaCetakDinamik');
-    
     if (!styleCetak) {
         styleCetak = document.createElement('style');
         styleCetak.id = 'gayaCetakDinamik';
         document.head.appendChild(styleCetak);
     }
-    
-    // Arahan wajib untuk printer membaca saiz
     styleCetak.innerHTML = `@page { size: ${saiz} landscape; margin: 10mm; }`;
 };
 
 window.cetakSalasilah = () => {
-    // Pastikan saiz kertas terkini diaktifkan sebelum tetingkap 'Print' keluar
     window.tukarSaizKertas(); 
-    // Browser akan automatik keluarkan tetingkap Print (Save as PDF)
     window.print(); 
 };
-
 
