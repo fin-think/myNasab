@@ -308,13 +308,9 @@ window.bukaPreview = async () => {
         // 2. Pembina Kad MyHeritage
         const binaKotak = (ahli, kategory) => {
             // Tentukan jantina/warna secara logik melalui gelaran hubungan
-                        let tema = 'theme-neutral';
+            let tema = 'theme-neutral';
             const hub = (ahli.relationship || '').toLowerCase();
-
-            // Tentukan jantina/warna secara logik
-            let tema = 'theme-neutral'; // Set default hijau awal-awal
-            let hub = ahli.relationship.toLowerCase();
-            
+           
             if (ahli.gender === 'L') {
                 tema = 'theme-lelaki';
             } 
