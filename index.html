@@ -161,6 +161,16 @@
                     <label>Nama Anda (Ketua Keluarga)</label>
                     <input type="text" id="inputNama">
                 </div>
+
+<div class="input-group hidden" id="groupJantinaDaftar">
+    <label>Jantina Anda</label>
+    <select id="inputJantina">
+        <option value="">-- Pilih Jantina --</option>
+        <option value="L">Lelaki</option>
+        <option value="P">Perempuan</option>
+    </select>
+</div>
+                
                 <button type="submit" class="btn-primary" id="btnSubmit">Log Masuk</button>
                 <p style="text-align: center; margin-top: 15px; font-size: 14px;">
                     <span id="toggleText">Belum ada akaun?</span> 
@@ -194,7 +204,17 @@
                         <option value="Ibu Mertua">Ibu Mertua (Bina Cabang Baru - Tolak 5 Kredit)</option>
                     </select>
                 </div>
-
+                
+<div class="input-group">
+    <label>Jantina</label>
+    <select id="tambahJantina" required>
+        <option value="">-- Pilih Jantina --</option>
+        <option value="L">Lelaki</option>
+        <option value="P">Perempuan</option>
+    </select>
+    <small style="color:#7f8c8d;">Ayah/Suami/Bapa Mertua dan Ibu/Isteri/Ibu Mertua auto dipilih. Anak, pilih sendiri.</small>
+</div>
+                
                 <div style="display: flex; gap: 10px;">
                     <div class="input-group" style="flex: 1;">
                         <label>Tarikh Lahir</label>
@@ -252,7 +272,15 @@
                     <label>Hubungan (Ketetapan Sistem)</label>
                     <input type="text" id="editAhliHubungan" disabled style="background-color: #f8f9f9; color: #7f8c8d; font-weight: bold; cursor: not-allowed;">
                 </div>
-
+                
+<div class="input-group">
+    <label>Jantina</label>
+    <select id="editAhliJantina" required>
+        <option value="">-- Pilih Jantina --</option>
+        <option value="L">Lelaki</option>
+        <option value="P">Perempuan</option>
+    </select>
+</div>
                 <div style="display: flex; gap: 10px;">
                     <div class="input-group" style="flex: 1;">
                         <label>Tarikh Lahir</label>
@@ -396,33 +424,43 @@
     <script>
         let modPendaftaran = false;
 
-        function tukarModAuth() {
-            modPendaftaran = !modPendaftaran;
-            if (modPendaftaran) {
-                document.getElementById('groupNama').classList.remove('hidden');
-                document.getElementById('modalTitle').innerText = "Daftar Akaun";
-                document.getElementById('btnSubmit').innerText = "Daftar Sekarang";
-                document.getElementById('toggleText').innerText = "Sudah ada akaun?";
-            } else {
-                document.getElementById('groupNama').classList.add('hidden');
-                document.getElementById('modalTitle').innerText = "Log Masuk";
-                document.getElementById('btnSubmit').innerText = "Log Masuk";
-                document.getElementById('toggleText').innerText = "Belum ada akaun?";
-            }
-        }
-        
-        document.getElementById('authForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const emel = document.getElementById('inputEmel').value;
-            const laluan = document.getElementById('inputKatalaluan').value;
-            if (modPendaftaran) {
-                const nama = document.getElementById('inputNama').value;
-                if(window.daftarPengguna) window.daftarPengguna(emel, laluan, nama);
-            } else {
-                if(window.logMasuk) window.logMasuk(emel, laluan);
-            }
-        });
-        
+       function tukarModAuth() {
+    modPendaftaran = !modPendaftaran;
+    document.getElementById('groupNama').classList.toggle('hidden', !modPendaftaran);
+    document.getElementById('groupJantinaDaftar').classList.toggle('hidden', !modPendaftaran);
+    document.getElementById('modalTitle').innerText = modPendaftaran ? "Daftar Akaun" : "Log Masuk";
+    document.getElementById('btnSubmit').innerText = modPendaftaran ? "Daftar Sekarang" : "Log Masuk";
+    document.getElementById('toggleText').innerText = modPendaftaran ? "Sudah ada akaun?" : "Belum ada akaun?";
+}
+
+document.getElementById('authForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const emel = document.getElementById('inputEmel').value;
+    const laluan = document.getElementById('inputKatalaluan').value;
+    if (modPendaftaran) {
+        const nama = document.getElementById('inputNama').value;
+        const jantina = document.getElementById('inputJantina').value;
+        if (!jantina) { alert("Sila pilih jantina anda."); return; }
+        if (window.daftarPengguna) window.daftarPengguna(emel, laluan, nama, jantina);
+    } else {
+        if (window.logMasuk) window.logMasuk(emel, laluan);
+    }
+});
+
+// Auto-pilih jantina ikut hubungan
+document.getElementById('tambahHubungan').addEventListener('change', function() {
+    const peta = { "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+    document.getElementById('tambahJantina').value = peta[this.value] || "";
+});
+
+document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const g = id => document.getElementById(id).value;
+    if (window.tambahAhliBaru) {
+        window.tambahAhliBaru(g('tambahNama'), g('tambahHubungan'), g('tambahDob'),
+            g('tambahTelefon'), g('tambahBandar'), g('tambahNegeri'), g('tambahJantina'));
+    }
+});        
         // Fungsi Buka & Tutup Borang Tambah Ahli
         function bukaModalBorang() {
             document.getElementById('modalTambahAhli').classList.remove('hidden');
