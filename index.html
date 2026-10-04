@@ -50,66 +50,76 @@
         .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; }
         .btn-primary { width: 100%; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-        /* --- GAYA PREMIUM PREVIEW SALASILAH (CSS TREE ENGINE) --- */
-        .modal-preview-box { width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #f8fafc; }
-        .kertas-cetakan { flex: 1; background: white; overflow: auto; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 40px; border-radius: 12px; margin-top: 15px; }
+       /* --- GAYA PREVIEW SALASILAH (GAYA MYHERITAGE VERSI MALAYSIA) --- */
+        .modal-preview-box { width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #fdfdfd; }
+        
+        /* Latar belakang kanvas (Krim/Beige lembut) */
+        .kertas-cetakan { flex: 1; background: #f6f4f0; overflow: auto; padding: 40px; border-radius: 8px; margin-top: 15px; border: 1px solid #e5e0d8; }
         
         /* Enjin Pokok CSS (CSS Tree Engine) */
-        .tree { display: flex; justify-content: center; padding-top: 20px; padding-bottom: 40px; }
-        .tree ul { padding-top: 30px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 30px 10px 0 10px; }
+        .tree { display: flex; justify-content: center; padding-top: 20px; padding-bottom: 40px; font-family: Arial, sans-serif; }
+        .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 25px 8px 0 8px; }
         
-        /* Garisan Penyambung Atas & Bawah */
+        /* Garisan Penyambung Atas & Bawah (Sangat nipis & kelabu seperti MyHeritage) */
         .tree li::before, .tree li::after {
             content: ''; position: absolute; top: 0; right: 50%;
-            border-top: 2px solid #94a3b8; width: 50%; height: 30px; z-index: 1;
+            border-top: 1px solid #a0a0a0; width: 50%; height: 25px; z-index: 1;
         }
-        .tree li::after { right: auto; left: 50%; border-left: 2px solid #94a3b8; }
-        
-        /* Bersihkan garisan yang tidak perlu (Bila tiada adik beradik) */
+        .tree li::after { right: auto; left: 50%; border-left: 1px solid #a0a0a0; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
-        
-        /* Penjuru garisan dibengkokkan (rounded corner) */
-        .tree li:last-child::before { border-right: 2px solid #94a3b8; border-radius: 0 5px 0 0; }
-        .tree li:first-child::after { border-radius: 5px 0 0 0; }
+        .tree li:last-child::before { border-right: 1px solid #a0a0a0; border-radius: 0; }
+        .tree li:first-child::after { border-radius: 0; }
         
         /* Garisan menegak turun ke anak-anak */
         .tree ul ul::before {
             content: ''; position: absolute; top: 0; left: 50%;
-            border-left: 2px solid #94a3b8; width: 0; height: 30px; z-index: 1;
+            border-left: 1px solid #a0a0a0; width: 0; height: 25px; z-index: 1;
         }
 
-        /* Kotak Kumpulan (Khas Untuk Hubungan Pasangan & Ibu Bapa) */
-        .couple-box { display: inline-flex; align-items: center; gap: 40px; position: relative; z-index: 10; margin-bottom: 0;}
+        /* Kotak Kumpulan (Pasangan Suami Isteri) */
+        .couple-box { display: inline-flex; align-items: center; gap: 20px; position: relative; z-index: 10; margin-bottom: 0;}
         .couple-box.connected::before {
             content: ''; position: absolute; top: 50%; left: 20px; right: 20px;
-            border-top: 2px dashed #94a3b8; z-index: -1; /* Garisan putus-putus antara suami isteri */
+            border-top: 1px solid #a0a0a0; z-index: -1; /* Garis lurus padu penyambung pasangan */
         }
 
-        /* Rekaan Kad Tahap Premium */
-        .node-card-premium {
-            background: #ffffff; border-radius: 12px; padding: 15px 25px;
-            min-width: 140px; box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-            border: 2px solid #e2e8f0; text-align: center;
-            position: relative; z-index: 2; transition: transform 0.2s;
+        /* --- REKAAN KAD MYHERITAGE --- */
+        .mh-card {
+            display: flex; align-items: stretch; text-align: left;
+            border-radius: 5px; width: 190px; box-shadow: 1px 2px 5px rgba(0,0,0,0.1);
+            position: relative; z-index: 2; border: 1px solid rgba(0,0,0,0.1);
+            transition: transform 0.2s; overflow: visible;
         }
-        .node-card-premium:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .node-card-premium h4 { margin: 10px 0 5px 0; font-size: 16px; color: #1e293b; font-weight: bold; }
-        .node-card-premium p { margin: 3px 0; font-size: 12px; color: #64748b; font-weight: 500;}
-        
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase;}
-        
-        /* Warna Tema Kad Berbeza Mengikut Hubungan */
-        .theme-diri { border-color: #10b981; }
-        .theme-diri .badge { background: #d1fae5; color: #059669; }
-        .theme-pasangan { border-color: #f43f5e; }
-        .theme-pasangan .badge { background: #ffe4e6; color: #e11d48; }
-        .theme-ibubapa { border-color: #6366f1; }
-        .theme-ibubapa .badge { background: #e0e7ff; color: #4f46e5; }
-        .theme-anak { border-color: #f59e0b; }
-        .theme-anak .badge { background: #fef3c7; color: #d97706; }
+        .mh-card:hover { transform: translateY(-3px); box-shadow: 2px 5px 10px rgba(0,0,0,0.15); }
+
+        /* Ruang Avatar (Gambar) */
+        .mh-avatar {
+            width: 50px; background: #e0e0e0; border-radius: 4px 0 0 4px;
+            display: flex; justify-content: center; align-items: flex-end; overflow: hidden;
+            border-right: 1px solid rgba(255,255,255,0.4); flex-shrink: 0;
+        }
+        .mh-avatar svg { width: 42px; height: 42px; fill: #9e9e9e; margin-bottom: -5px; }
+
+        /* Ruang Teks & Maklumat */
+        .mh-details { padding: 8px 10px; overflow: hidden; flex: 1; display: flex; flex-direction: column; justify-content: center;}
+        .mh-name { margin: 0; font-size: 13px; font-weight: bold; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+        .mh-info { margin: 3px 0 0 0; font-size: 11px; color: #444; }
+
+        /* Lencana Tag Hubungan (Terapung di penjuru atas) */
+        .badge-mini {
+            position: absolute; top: -10px; right: -5px; font-size: 9px; 
+            background: #ffffff; border: 1px solid #ccc; padding: 2px 8px; 
+            border-radius: 12px; font-weight: bold; color: #555;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* --- TEMA WARNA KAD (KOD WARNA SOLID PASTEL) --- */
+        .theme-lelaki { background-color: #aed9e0; border-color: #8ab6be; } /* Biru lembut */
+        .theme-perempuan { background-color: #f8c8d4; border-color: #d19ba9; } /* Pink lembut */
+        .theme-neutral { background-color: #c9e4ca; border-color: #a4c4a6; } /* Hijau lembut */
 
         /* Sembunyikan Butang Masa Print / PDF */
         @media print {
@@ -117,7 +127,7 @@
             #modalPreview, #modalPreview * { visibility: visible; }
             #modalPreview { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; align-items: flex-start; padding: 0;}
             .modal-preview-box { width: 100%; height: 100%; box-shadow: none; padding: 0; border: none; background: white;}
-            .kertas-cetakan { border: none; box-shadow: none; padding: 0; margin: 0; overflow: visible; }
+            .kertas-cetakan { border: none; box-shadow: none; padding: 0; margin: 0; overflow: visible; background: white;} /* Buang warna beige masa print jimat ink */
             #kawalanPreview { display: none !important; }
         }
         
