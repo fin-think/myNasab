@@ -458,7 +458,7 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (FIX JARAK PASANGAN & ATUK NENEK) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (FLEXBOX KEBAL) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
@@ -517,18 +517,18 @@ window.bukaPreview = async () => {
             `;
         };
 
-        // FUNGSI BINA TIANG (TANPA POSITION ABSOLUTE)
         const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
-            let str = `<div class="pillar">`; // Tidak ada lagi position relative/absolute
+            let str = `<div class="pillar">`;
             
             if (senaraiIbubapa.length > 0) {
-                let classIbuBapa = "couple-wrapper has-children";
+                // Gunakan class ancestor-couple untuk jarak atas
+                let classIbuBapa = "couple-wrapper ancestor-couple has-children";
                 if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
                 
-                // Disusun secara standar untuk memaksa Flexbox memberikan jarak
                 str += `<div class="${classIbuBapa}">`;
                 
-                let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa/)) || senaraiIbubapa[0];
+                // FIX DATUK/NENEK TERBALIK: Tambah 'datuk' dalam syarat match
+                let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa|datuk/)) || senaraiIbubapa[0];
                 let ibu = senaraiIbubapa.find(ib => ib !== bapa);
                 
                 str += binaTiang(bapa, senaraiDatukNenek, 'ibubapa', []); 
@@ -542,13 +542,13 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        // SUSUNAN HTML UTAMA
         let htmlLayout = '<div class="tree"><ul><li>';
         
         let adaAnak = anakAnak.length > 0;
         let adaPasangan = pasangan.length > 0;
         
-        let classWrapper = "couple-wrapper";
+        // Gunakan class main-couple untuk baris utama
+        let classWrapper = "couple-wrapper main-couple";
         if (adaPasangan) classWrapper += " has-spouse";
         if (adaAnak) classWrapper += " has-children";
         
