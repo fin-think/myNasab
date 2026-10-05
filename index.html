@@ -534,21 +534,31 @@ document.getElementById('formTambahAhli').addEventListener('submit', function(e)
         }
 
       // Tangkap isian borang Tambah Ahli
-document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const nama = document.getElementById('tambahNama').value;
-    const hubungan = document.getElementById('tambahHubungan').value;
-    const dob = document.getElementById('tambahDob').value;
-    const telefon = document.getElementById('tambahTelefon').value;
-    const bandar = document.getElementById('tambahBandar').value;
-    const negeri = document.getElementById('tambahNegeri').value;
-    const gambar = document.getElementById('tambahGambar').files[0];
-    const jantina = document.getElementById('tambahJantina').value;
-    
-    if(window.tambahAhliBaru) {
-        window.tambahAhliBaru(nama, hubungan, dob, telefon, bandar, negeri, gambar, jantina);
-    }
-});
+        document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nama = document.getElementById('tambahNama').value;
+            const hubungan = document.getElementById('tambahHubungan').value;
+            
+            // TANGKAP JANTINA (Sila pastikan ID select jantina di borang anda ialah 'tambahJantina')
+            // Jika ID anda berbeza, sila tukar perkataan 'tambahJantina' di bawah mengikut ID anda.
+            const jantinaElemen = document.getElementById('tambahJantina') || document.querySelector('select[name="jantina"]');
+            const jantina = jantinaElemen ? jantinaElemen.value : 'L'; // Lalai ke 'L' jika tak jumpa
+            
+            const dob = document.getElementById('tambahDob').value;
+            const telefon = document.getElementById('tambahTelefon').value;
+            const bandar = document.getElementById('tambahBandar').value;
+            const negeri = document.getElementById('tambahNegeri').value;
+            
+            // TANGKAP GAMBAR DENGAN BETUL (Ambil fail, bukan elemen HTML)
+            const inputGambar = document.getElementById('tambahGambar');
+            const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
+            
+            if(window.tambahAhliBaru) {
+                // Hantar jantina & gambar yang betul ke app.js
+                window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar);
+            }
+        });
+        
     </script>
 </body>
 </html>
