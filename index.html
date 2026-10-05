@@ -164,9 +164,14 @@
             body * { visibility: hidden; }
             #modalPreview, #modalPreview * { visibility: visible; }
             #modalPreview { position: absolute; left: 0; top: 0; width: 100%; height: 100%; align-items: flex-start; padding: 0;}
-            .modal-preview-box { width: 100%; height: 100%; box-shadow: none; padding: 0; border: none; background: white;}
+            .modal-preview-box { width: 100%; height: auto; box-shadow: none; padding: 0; border: none; background: white !important;}
             .kertas-cetakan { border: none; box-shadow: none; padding: 0; margin: 0; overflow: visible; background: white;}
             #kawalanPreview { display: none !important; }
+            #dashboardUtama { display: none !important; }
+            .mh-card, .mh-avatar, .badge-mini {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            }
         }
         
     </style>
@@ -458,7 +463,7 @@
     </div>
 
     <!-- Muatkan app.js -->
-    <script type="module" src="app.js?v=4"></script>
+    <script type="module" src="app.js?v=6"></script>
     
     <!-- Skrip UI Mudah -->
     <script>
