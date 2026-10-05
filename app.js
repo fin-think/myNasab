@@ -456,8 +456,9 @@ window.bukaPreview = async () => {
             return { senarai, sisa: levels.slice(idx + 1) };
         };
 
-        const lelaki = x => x.gender === 'L' ||
-            /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test(x.relationship.toLowerCase());
+        const lelaki = x => x.gender
+    ? x.gender === 'L'   // kalau jantina dah ditetapkan, ikut jantina
+    : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test(x.relationship.toLowerCase()); // data lama sahaja
 
         const binaTiangAtasan = (ahli, levels = [], kategoryAhli = 'neutral', utama = true) => {
             let str = `<div class="pillar">`;
