@@ -99,7 +99,15 @@
         
         /* Jarak antara ibu bapa dan anak */
         .ancestor-couple { padding-bottom: 30px; }
-        
+
+/* Datuk/Nenek: jangan lebarkan tiang ibu bapa */
+.ancestor-couple .pillar > .ancestor-couple { width: 0; min-width: 0; overflow: visible; }
+
+/* Simpan ruang di tepi supaya Datuk/Nenek tak terpotong */
+.ancestor-couple:has(.pillar > .ancestor-couple) > .pillar:first-child { padding-left: 125px; }
+.ancestor-couple:has(.pillar > .ancestor-couple) > .pillar:last-child  { padding-right: 125px; }
+
+       
         /* Garisan Mendatar Suami & Isteri */
         .couple-wrapper.has-spouse > .pillar::before {
             content: ''; position: absolute;
@@ -481,7 +489,7 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
 
 // Auto-pilih jantina ikut hubungan
 document.getElementById('tambahHubungan').addEventListener('change', function() {
-    const peta = { "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+   const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
     document.getElementById('tambahJantina').value = peta[this.value] || "";
 });
 
@@ -504,20 +512,21 @@ document.getElementById('formTambahAhli').addEventListener('submit', function(e)
         }
 
       // Tangkap isian borang Tambah Ahli
-        document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const nama = document.getElementById('tambahNama').value;
-            const hubungan = document.getElementById('tambahHubungan').value;
-            const dob = document.getElementById('tambahDob').value;
-            const telefon = document.getElementById('tambahTelefon').value;
-            const bandar = document.getElementById('tambahBandar').value;
-            const negeri = document.getElementById('tambahNegeri').value;
-            const gambar = document.getElementById('tambahGambar').files[0]; // Tangkap fail gambar
-            
-            if(window.tambahAhliBaru) {
-                window.tambahAhliBaru(nama, hubungan, dob, telefon, bandar, negeri, gambar);
-            }
-        });
+document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const nama = document.getElementById('tambahNama').value;
+    const hubungan = document.getElementById('tambahHubungan').value;
+    const dob = document.getElementById('tambahDob').value;
+    const telefon = document.getElementById('tambahTelefon').value;
+    const bandar = document.getElementById('tambahBandar').value;
+    const negeri = document.getElementById('tambahNegeri').value;
+    const gambar = document.getElementById('tambahGambar').files[0];
+    const jantina = document.getElementById('tambahJantina').value;
+    
+    if(window.tambahAhliBaru) {
+        window.tambahAhliBaru(nama, hubungan, dob, telefon, bandar, negeri, gambar, jantina);
+    }
+});
     </script>
 </body>
 </html>
