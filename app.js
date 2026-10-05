@@ -445,30 +445,41 @@ window.bukaPreview = async () => {
             `;
         };
 
-        // Fungsi Membina Tiang Nenek Moyang (Berangkai infiniti ke atas)
-        const binaTiangAtasan = (ahli, ancestorLevels = [], kategoryAhli = 'neutral') => {
-            let str = `<div class="pillar">`;
-            let firstLevelIndex = ancestorLevels.findIndex(arr => arr.length > 0);
-            
-            if (firstLevelIndex !== -1) {
-                let levelData = ancestorLevels[firstLevelIndex];
-                let remainingLevels = ancestorLevels.slice(firstLevelIndex + 1);
+               // Cari ibu bapa seseorang di peringkat atas seterusnya
+        // utama = orang yang dapat data lama (tiada ref_id)
+        const cariIbuBapa = (ahli, levels, utama) => {
+            const idx = levels.findIndex(arr => arr.length > 0);
+            if (idx === -1) return { senarai: [], sisa: [] };
+            const senarai = levels[idx].filter(x =>
+                (x.ref_id && semuaId.has(x.ref_id)) ? x.ref_id === ahli.id : utama
+            );
+            return { senarai, sisa: levels.slice(idx + 1) };
+        };
 
-                let classIbuBapa = "couple-wrapper ancestor-couple has-children";
-                if (levelData.length > 1) classIbuBapa += " has-spouse";
-                
-                str += `<div class="${classIbuBapa}">`;
-                
-                // Suami / Lelaki sentiasa di kiri
-                let bapa = levelData.find(ib => ib.gender === 'L' || ib.relationship.toLowerCase().match(/ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/)) || levelData[0];
-                let ibu = levelData.find(ib => ib !== bapa);
-                
-                str += binaTiangAtasan(bapa, remainingLevels, 'ibubapa'); 
-                if (ibu) str += binaTiangAtasan(ibu, [], 'ibubapa');
-                
+        const lelaki = x => x.gender === 'L' ||
+            /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test(x.relationship.toLowerCase());
+
+        const binaTiangAtasan = (ahli, levels = [], kategoryAhli = 'neutral', utama = true) => {
+            let str = `<div class="pillar">`;
+            const { senarai, sisa } = cariIbuBapa(ahli, levels, utama);
+
+            if (senarai.length > 0) {
+                const bapa = senarai.find(lelaki) || senarai[0];
+                const ibu = senarai.find(x => x !== bapa);
+
+                let kelas = "couple-wrapper ancestor-couple has-children";
+                if (ibu) kelas += " has-spouse";
+                // Kedua-dua belah ada ibu bapa: jarakkan supaya tak bertindih
+                const bapaAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
+                const ibuAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
+                if (bapaAda && ibuAda) kelas += " anc-both";
+
+                str += `<div class="${kelas}">`;
+                str += binaTiangAtasan(bapa, sisa, 'ibubapa', true);
+                if (ibu) str += binaTiangAtasan(ibu, sisa, 'ibubapa', false);
                 str += `</div>`;
             }
-            
+
             str += binaKotak(ahli, kategoryAhli);
             str += `</div>`;
             return str;
