@@ -242,9 +242,8 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Gambar Profil (Kosmetik)</label>
-                    <input type="file" disabled title="Fungsi premium ini akan diaktifkan kelak">
-                    <small style="color: #e67e22; font-weight: bold;">*Fungsi muat naik gambar & AI akan diaktifkan kelak.</small>
+                    <label>Gambar Profil (Premium: Caj 1 Kredit)</label>
+                    <input type="file" id="tambahGambar" accept="image/*">
                 </div>
                 
                 <button type="submit" class="btn-primary" style="background-color: #27ae60; margin-top: 15px;">Simpan Ahli</button>
@@ -307,10 +306,10 @@
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Gambar Profil (Kosmetik)</label>
-                    <input type="file" disabled>
-                    <small style="color: #e67e22; font-weight: bold;">*Fungsi muat naik gambar & AI akan diaktifkan kelak.</small>
+               <div class="input-group">
+                    <label>Tukar Gambar Profil (Premium: Caj 1 Kredit)</label>
+                    <input type="file" id="editAhliGambar" accept="image/*">
+                    <small style="color: #7f8c8d;">Biarkan kosong jika tidak mahu tukar gambar.</small>
                 </div>
                 
                 <button type="submit" class="btn-primary" style="background-color: #2980b9; margin-top: 15px;">Simpan Perubahan</button>
@@ -475,7 +474,7 @@ document.getElementById('formTambahAhli').addEventListener('submit', function(e)
             document.getElementById('formTambahAhli').reset();
         }
 
-       // Tangkap isian borang Tambah Ahli dan hantar ke app.js
+      // Tangkap isian borang Tambah Ahli
         document.getElementById('formTambahAhli').addEventListener('submit', function(e) {
             e.preventDefault();
             const nama = document.getElementById('tambahNama').value;
@@ -484,9 +483,10 @@ document.getElementById('formTambahAhli').addEventListener('submit', function(e)
             const telefon = document.getElementById('tambahTelefon').value;
             const bandar = document.getElementById('tambahBandar').value;
             const negeri = document.getElementById('tambahNegeri').value;
+            const gambar = document.getElementById('tambahGambar').files[0]; // Tangkap fail gambar
             
             if(window.tambahAhliBaru) {
-                window.tambahAhliBaru(nama, hubungan, dob, telefon, bandar, negeri);
+                window.tambahAhliBaru(nama, hubungan, dob, telefon, bandar, negeri, gambar);
             }
         });
     </script>
