@@ -165,12 +165,19 @@ window.padamAhli = async (idAhli) => {
     }
 };
 
-// --- 5. FUNGSI TAMBAH AHLI BARU (CAJ GENERASI BAWAH) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
+// --- 5. FUNGSI TAMBAH AHLI BARU (PANTAS & TANPA NOTIFIKASI MENYEMAK) ---
+window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar) => {
     if (!penggunaSemasa) return;
     
     const btnSubmit = document.querySelector('#formTambahAhli button[type="submit"]');
-    if(btnSubmit) btnSubmit.disabled = true;
+    let teksAsalButang = "Simpan Ahli";
+    
+    // Kunci butang dan tukar teks secara senyap (tanpa popup alert)
+    if(btnSubmit) {
+        teksAsalButang = btnSubmit.innerText;
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = "Menyimpan..."; 
+    }
 
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
@@ -181,7 +188,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
         let kosAhli = 0;
         let hubLower = hubungan.toLowerCase();
         
-        // Logik Harga Ahli
+        // Pengiraan Caj Ahli
         if (hubungan === "Anak") {
             const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
             const snapAnak = await getDocs(qAnak);
@@ -191,38 +198,45 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             kosAhli = 5;
         }
         else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng")) {
-            kosAhli = 1; // Caj wajib 1 kredit
+            kosAhli = 1; 
         }
         
-        let kosGambar = failGambar ? 1 : 0;
+        // Pengiraan Caj Gambar (Hanya jika gambar wujud dan bersaiz lebih 0)
+        let kosGambar = (failGambar && failGambar.size > 0) ? 1 : 0;
         let jumlahKos = kosAhli + kosGambar;
         
-        if (bakiTerkini < jumlahKos) {
-            alert(`Baki kredit tidak mencukupi!\n\n• Caj Tambah Ahli: ${kosAhli} Kredit\n• Caj Gambar: ${kosGambar} Kredit\n• Jumlah Diperlukan: ${jumlahKos} Kredit\n\nBaki Semasa: ${bakiTerkini} Kredit\nSila tambah nilai.`);
-            if(btnSubmit) btnSubmit.disabled = false;
+        // ALERT HANYA KELUAR JIKA KREDIT TIDAK CUKUP
+        if (jumlahKos > 0 && bakiTerkini < jumlahKos) {
+            alert(`Baki kredit tidak mencukupi!\n\nSistem perlukan: ${jumlahKos} Kredit\n(Caj Ahli: ${kosAhli} + Caj Gambar: ${kosGambar})\n\nBaki semasa anda: ${bakiTerkini} Kredit.`);
+            if(btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = teksAsalButang;
+            }
             return; 
         }
         
+        // POTONG KREDIT TERUS TANPA NOTIFIKASI (Senyap)
         if (jumlahKos > 0) {
             await updateDoc(refPengguna, { credit_balance: increment(-jumlahKos) });
             document.getElementById('creditBalance').innerText = bakiTerkini - jumlahKos;
         }
 
+        // UPLOAD GAMBAR SECARA SENYAP (Tiada lagi alert "Sedang memuat naik...")
         let urlGambar = "";
-        if (failGambar) {
-            alert("Sedang memuat naik gambar. Sila tunggu sebentar...");
+        if (failGambar && failGambar.size > 0) {
             const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
             await uploadBytes(storageRef, failGambar);
             urlGambar = await getDownloadURL(storageRef);
         }
         
+        // SIMPAN DATA KE DATABASE
         await addDoc(collection(db, "mynasab_nodes"), {
             owner_uid: penggunaSemasa.uid,
             name: nama,
             relationship: hubungan,
+            gender: jantina,
             dob: dob,
             phone: telefon,
-            gender: jantina,
             city: bandar,
             state: negeri,
             photo_url: urlGambar,
@@ -230,6 +244,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             created_at: new Date()
         });
         
+        // Hanya satu notifikasi dihujung untuk beritahu proses selesai
         alert(`Berjaya! ${nama} direkodkan.`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
@@ -238,7 +253,11 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
     } catch (error) {
         alert("Gagal menambah data: " + error.message);
     } finally {
-        if(btnSubmit) btnSubmit.disabled = false;
+        // Kembalikan butang kepada asal
+        if(btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = teksAsalButang;
+        }
     }
 };
 
