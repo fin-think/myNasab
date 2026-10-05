@@ -317,9 +317,12 @@
                     </div>
                 </div>
 
-                <div class="input-group">
+               <div class="input-group">
                     <label>Gambar Profil (Premium: Caj 1 Kredit)</label>
-                    <input type="file" id="tambahGambar" accept="image/*">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="tambahGambar" accept="image/*" style="flex: 1;">
+                        <button type="button" onclick="document.getElementById('tambahGambar').value = ''" style="background: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; white-space: nowrap;">X Padam Pilihan</button>
+                    </div>
                     <small style="color: #7f8c8d;">*Pilihan: Biarkan kosong jika tiada gambar (Ikon siluet akan digunakan).</small>
                 </div>
                 
@@ -385,7 +388,10 @@
 
                <div class="input-group">
                     <label>Tukar Gambar Profil (Premium: Caj 1 Kredit)</label>
-                    <input type="file" id="editAhliGambar" accept="image/*">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="editAhliGambar" accept="image/*" style="flex: 1;">
+                        <button type="button" onclick="document.getElementById('editAhliGambar').value = ''" style="background: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; white-space: nowrap;">X Padam Pilihan</button>
+                    </div>
                     <small style="color: #7f8c8d;">Biarkan kosong jika tidak mahu tukar gambar.</small>
                 </div>
                 
