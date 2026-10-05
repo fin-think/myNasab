@@ -165,57 +165,55 @@ window.padamAhli = async (idAhli) => {
     }
 };
 
-// --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT YANG DIPERBAIKI) ---
+// --- 5. FUNGSI TAMBAH AHLI BARU (BAHASA MELAYU & PENGASINGAN KREDIT) ---
 window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
     try {
         const snapPengguna = await getDoc(refPengguna);
-        // Pastikan saldo dibaca sebagai angka (integer)
         const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0; 
         
-        let kosKredit = 0;
+        let kosAhli = 0;
         
-        // Logika 5 Anak Percuma
+        // Semak kos ahli
         if (hubungan === "Anak") {
             const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
             const snapAnak = await getDocs(qAnak);
-            if (snapAnak.size >= 5) kosKredit += 1; // Caj 1 kredit untuk anak ke-6
+            if (snapAnak.size >= 5) kosAhli = 1; // Anak ke-6 baru tolak kredit
         }
         else if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") {
-            kosKredit += 5;
+            kosAhli = 5;
         }
         
-        // JIKA ADA UPLOAD GAMBAR, TAMBAH CAJ 1 KREDIT (Berlaku untuk semua termasuk Datuk/Nenek)
-        if (failGambar) {
-            kosKredit += 1;
-        }
+        // Semak kos gambar berasingan
+        let kosGambar = failGambar ? 1 : 0;
+        let jumlahKos = kosAhli + kosGambar;
         
-        // Pengecekan Saldo yang ketat
-        if (bakiTerkini < kosKredit) {
-            alert(`Saldo kredit tidak mencukupi! Anda butuh ${kosKredit} kredit (Termasuk caj 1 kredit jika Anda mengunggah gambar). Sisa saldo Anda: ${bakiTerkini}`);
+        // Notis jika kredit tak cukup (Bahasa Melayu & Jelas)
+        if (bakiTerkini < jumlahKos) {
+            alert(`Baki kredit anda tidak mencukupi!\n\n• Caj Tambah Ahli: ${kosAhli} Kredit\n• Caj Muat Naik Gambar: ${kosGambar} Kredit\n• Jumlah Diperlukan: ${jumlahKos} Kredit\n\nBaki Kredit Anda: ${bakiTerkini} Kredit\nSila tambah nilai kredit anda.`);
             return;
         }
         
         // Tolak kredit dari Wallet
-        if (kosKredit > 0) {
-            await updateDoc(refPengguna, { credit_balance: increment(-kosKredit) });
-            document.getElementById('creditBalance').innerText = bakiTerkini - kosKredit;
+        if (jumlahKos > 0) {
+            await updateDoc(refPengguna, { credit_balance: increment(-jumlahKos) });
+            document.getElementById('creditBalance').innerText = bakiTerkini - jumlahKos;
         }
 
-        // Proses Upload Gambar ke Firebase Storage
+        // Proses Muat Naik Gambar
         let urlGambar = "";
         if (failGambar) {
             document.getElementById('modalTambahAhli').classList.add('hidden'); 
-            alert("Sedang mengunggah gambar dan menyimpan data. Harap tunggu sebentar...");
+            alert("Sistem sedang memuat naik gambar dan menyimpan data. Sila tunggu sebentar...");
             
             const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
             await uploadBytes(storageRef, failGambar);
             urlGambar = await getDownloadURL(storageRef);
         }
         
-        // Simpan Data Ahli ke Firestore
+        // Simpan Data
         await addDoc(collection(db, "mynasab_nodes"), {
             owner_uid: penggunaSemasa.uid,
             name: nama,
@@ -229,7 +227,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             created_at: new Date()
         });
         
-        alert(`${nama} berhasil ditambahkan!`);
+        alert(`Berjaya! ${nama} telah ditambah ke dalam salasilah.`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
         window.muatTurunSalasilah(); 
@@ -334,12 +332,12 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (ANTI TUMPANG TINDIH) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (STRUKTUR TIANG / PILLAR V4) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
     document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang menggambar pohon silsilah...</p>';
+    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok salasilah...</p>';
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -393,83 +391,66 @@ window.bukaPreview = async () => {
             `;
         };
 
-        // Ruang atas yang lebih besar agar silsilah tidak terpotong
-        let htmlLayout = '<div class="tree" style="padding-top: 140px;"><ul><li>';
+        // Fungsi Pintar Membina Tiang (Pillar) & Menyusun Ibubapa ke atas
+        const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
+            let str = `<div class="pillar">`;
+            
+            if (senaraiIbubapa.length > 0) {
+                let classIbuBapa = "couple-wrapper has-children";
+                if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
+                
+                str += `<div class="${classIbuBapa}">`;
+                
+                let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa/)) || senaraiIbubapa[0];
+                let ibu = senaraiIbubapa.find(ib => ib !== bapa);
+                
+                // Datuk & Nenek dipasang pada sebelah bapa sahaja
+                str += binaTiang(bapa, senaraiDatukNenek, 'ibubapa', []); 
+                if (ibu) str += binaTiang(ibu, [], 'ibubapa', []);
+                
+                str += `</div>`;
+            }
+            
+            str += binaKotak(ahli, kategoryAhli);
+            str += `</div>`;
+            return str;
+        };
 
+        // Susun Semula Html Utama
+        let htmlLayout = '<div class="tree"><ul><li>';
+        
         let adaAnak = anakAnak.length > 0;
         let adaPasangan = pasangan.length > 0;
-
+        
         let classWrapper = "couple-wrapper";
         if (adaPasangan) classWrapper += " has-spouse";
         if (adaAnak) classWrapper += " has-children";
-
-        // LOGIKA PENJAGAAN JARAK (Mencegah tumpang tindih antara Orang Tua & Mertua)
-        let styleKhas = "";
-        if (ibuBapa.length > 0 && mertua.length > 0) {
-            styleKhas = "gap: 220px;"; // Melebarkan jarak antara Diri & Pasangan agar muat untuk mertua
+        
+        htmlLayout += `<div class="${classWrapper}">`;
+        
+        // 1. Tiang Diri Sendiri (Serta Ibubapa & Datuk Nenek)
+        if (diriSendiri) {
+            htmlLayout += binaTiang(diriSendiri, ibuBapa, 'diri', datukNenek);
         }
-
-        htmlLayout += `<div class="${classWrapper}" style="${styleKhas}">`;
-
-        // --- 1. CABANG KIRI (DIRI SENDIRI & ORANG TUA) ---
-        htmlLayout += `<div style="position: relative;">`;
-        if (ibuBapa.length > 0) {
-             let bapa = ibuBapa.find(ib => ib.relationship.toLowerCase().includes('ayah') || ib.relationship.toLowerCase().includes('bapa')) || ibuBapa[0];
-             let ibu = ibuBapa.find(ib => ib !== bapa);
-
-             let classIbuBapa = "couple-wrapper has-children";
-             if (ibu) classIbuBapa += " has-spouse";
-
-             htmlLayout += `<div class="${classIbuBapa}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap; z-index: 10;">`;
-
-             // Cabang Kakek & Nenek di atas Ayah
-             htmlLayout += `<div style="position: relative;">`;
-             if (datukNenek.length > 0) {
-                  let classDatuk = "couple-wrapper has-children";
-                  if (datukNenek.length > 1) classDatuk += " has-spouse";
-                  htmlLayout += `<div class="${classDatuk}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap;">`;
-                  datukNenek.forEach(dn => htmlLayout += binaKotak(dn, 'ibubapa'));
-                  htmlLayout += `</div>`;
-             }
-             htmlLayout += binaKotak(bapa, 'ibubapa');
-             htmlLayout += `</div>`; // Selesai kotak Ayah
-
-             if (ibu) {
-                 htmlLayout += `<div>${binaKotak(ibu, 'ibubapa')}</div>`;
-             }
-             htmlLayout += `</div>`;
-        }
-        if (diriSendiri) htmlLayout += binaKotak(diriSendiri, 'diri');
-        htmlLayout += `</div>`; // Selesai Cabang Kiri
-
-        // --- 2. CABANG KANAN (PASANGAN & MERTUA) ---
+        
+        // 2. Tiang Pasangan (Serta Mertua)
         if (adaPasangan) {
-             pasangan.forEach(p => {
-                 htmlLayout += `<div style="position: relative;">`;
-                 if (mertua.length > 0) {
-                      let classMertua = "couple-wrapper has-children";
-                      if (mertua.length > 1) classMertua += " has-spouse";
-                      
-                      htmlLayout += `<div class="${classMertua}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap; z-index: 10;">`;
-                      mertua.forEach(m => htmlLayout += binaKotak(m, 'ibubapa'));
-                      htmlLayout += `</div>`;
-                 }
-                 htmlLayout += binaKotak(p, 'pasangan');
-                 htmlLayout += `</div>`;
-             });
+            pasangan.forEach(p => {
+                htmlLayout += binaTiang(p, mertua, 'pasangan', []);
+            });
         }
-
-        htmlLayout += `</div>`; // Selesai Wrapper Pasangan Utama
-
-        // --- 3. ANAK-ANAK DI BAWAH ---
+        
+        htmlLayout += `</div>`;
+        
+        // 3. Senarai Anak-anak
         if (adaAnak) {
             htmlLayout += `<ul>`;
             anakAnak.forEach(anak => {
-                htmlLayout += `<li><div class="couple-wrapper">${binaKotak(anak, 'anak')}</div></li>`;
+                htmlLayout += `<li><div class="couple-wrapper">${binaTiang(anak, [], 'anak', [])}</div></li>`;
             });
             htmlLayout += `</ul>`;
         }
-
+        
         htmlLayout += `</li></ul></div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
 
