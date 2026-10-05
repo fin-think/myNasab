@@ -332,25 +332,28 @@ window.bukaPreview = async () => {
 
         let htmlLayout = '<div class="tree"><ul>';
 
-        // Fungsi bina Diri Sendiri & Isteri, lalu sambung ke Anak
+        // Fungsi Rangka Diri Sendiri & Anak
         const renderDiriDanAnak = () => {
             let str = `<li>`;
             let adaAnak = anakAnak.length > 0;
-            let classWrapper = "couple-wrapper" + (adaAnak ? " has-children" : "");
+            let adaPasangan = pasangan.length > 0;
             
-            // Masukkan anda dan pasangan di dalam wrapper yang sama (Side-by-Side)
+            // Pengesan status 'Bekas Pasangan'
+            let classWrapper = "couple-wrapper";
+            if (adaPasangan) classWrapper += " has-spouse";
+            if (adaAnak) classWrapper += " has-children";
+            
+            // Letak anda dan isteri dalam satu bekas (bersebelahan)
             str += `<div class="${classWrapper}">`;
             if (diriSendiri) str += binaKotak(diriSendiri, 'diri');
             pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
-            // Jika single (tiada pasangan), letak 'single' supaya tiada garisan sambung
-            if (pasangan.length === 0) str = str.replace('couple-wrapper', 'couple-wrapper single');
             str += `</div>`;
             
-            // Papar Anak di bawahnya
+            // Garisan dari bekas tadi terus turun ke anak-anak (Center automatik)
             if (adaAnak) {
                 str += `<ul>`;
                 anakAnak.forEach(anak => { 
-                    str += `<li><div class="couple-wrapper single">${binaKotak(anak, 'anak')}</div></li>`; 
+                    str += `<li><div class="couple-wrapper">${binaKotak(anak, 'anak')}</div></li>`; 
                 });
                 str += `</ul>`;
             }
@@ -358,29 +361,29 @@ window.bukaPreview = async () => {
             return str;
         }
 
-        // --- MULA DARI IBU BAPA (JIKA ADA) ---
+        // --- MULA BINA DARI IBU BAPA ---
         if (ibuBapa.length > 0) {
             htmlLayout += `<li>`;
-            let classWrapperIbuBapa = "couple-wrapper has-children";
-            if (ibuBapa.length === 1) classWrapperIbuBapa += " single";
             
-            htmlLayout += `<div class="${classWrapperIbuBapa}">`;
-            
+            // Susun Ayah sebelah Ibu
             let bapa = ibuBapa.find(ib => ib.relationship.toLowerCase().includes('ayah') || ib.relationship.toLowerCase().includes('bapa')) || ibuBapa[0];
             let ibu = ibuBapa.find(ib => ib !== bapa);
             
+            let classWrapperIbuBapa = "couple-wrapper has-children"; // Sentiasa true sbb kita (Diri Sendiri) adalah anak mereka
+            if (ibu) classWrapperIbuBapa += " has-spouse";
+            
+            htmlLayout += `<div class="${classWrapperIbuBapa}">`;
             htmlLayout += binaKotak(bapa, 'ibubapa');
             if (ibu) htmlLayout += binaKotak(ibu, 'ibubapa');
-            
             htmlLayout += `</div>`;
             
-            // Diri Sendiri akan berada di bawah Ibubapa
+            // Kita (Diri Sendiri) diletakkan di bawah ibu bapa
             htmlLayout += `<ul>`;
             htmlLayout += renderDiriDanAnak();
             htmlLayout += `</ul>`;
             htmlLayout += `</li>`;
         } else {
-            // Jika tiada Ibu Bapa, Diri Sendiri adalah Akar
+            // Jika tiada mak ayah direkod, mula dari Diri Sendiri
             htmlLayout += renderDiriDanAnak();
         }
 
