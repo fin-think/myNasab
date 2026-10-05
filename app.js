@@ -463,7 +463,8 @@ window.bukaPreview = async () => {
 };
 
 // --- 8. SAIZ KERTAS & CETAK ---
-const SAIZ_KERTAS = { A4: { w: 297 }, A3: { w: 420 }, A1: { w: 841 } }; // lebar landscape (mm)
+const SAIZ_KERTAS = { A4: { w: 297, h: 210 }, A3: { w: 420, h: 297 }, A1: { w: 841, h: 594 } }; // landscape (mm)
+const MM = 3.78; // 1mm ≈ 3.78px
 
 window.tukarSaizKertas = () => {
     const saiz = document.getElementById('pilihanSaizKertas').value;
@@ -482,16 +483,17 @@ window.cetakSalasilah = () => {
     const saiz = document.getElementById('pilihanSaizKertas').value;
     const ruang = document.getElementById('ruangAutoLayout');
     const pokok = ruang.querySelector('.tree');
+    const tajuk = document.getElementById('tajukKeluargaCetak');
 
-    // Kecilkan pokok automatik jika lebih lebar dari kertas (1mm ≈ 3.78px)
+    // Sesuaikan pokok ikut lebar DAN tinggi kertas (besar/kecil ikut saiz kertas)
+    ruang.style.zoom = 1;
     if (pokok) {
-        const lebarKertas = (SAIZ_KERTAS[saiz].w - 20) * 3.78;
-        const lebarPokok = pokok.scrollWidth;
-        if (lebarPokok > lebarKertas) ruang.style.zoom = lebarKertas / lebarPokok;
+        const lebarMuat = (SAIZ_KERTAS[saiz].w - 20) * MM;
+        const tinggiMuat = (SAIZ_KERTAS[saiz].h - 20) * MM - tajuk.offsetHeight - 40;
+        const skala = Math.min(lebarMuat / pokok.scrollWidth, tinggiMuat / pokok.scrollHeight, 3) * 0.95;
+        ruang.style.zoom = skala;
     }
 
-    // Reset saiz lepas dialog print ditutup
     window.addEventListener('afterprint', () => { ruang.style.zoom = 1; }, { once: true });
-
-    window.print();
+    setTimeout(() => window.print(), 100); // bagi masa browser susun semula
 };
