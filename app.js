@@ -458,7 +458,7 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (LOGIK POLIGAMI) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (FIX JARAK PASANGAN & ATUK NENEK) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
@@ -517,14 +517,16 @@ window.bukaPreview = async () => {
             `;
         };
 
+        // FUNGSI BINA TIANG (DIKEMASKINI UNTUK ELAK TOLAK PASANGAN)
         const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
-            let str = `<div class="pillar">`;
+            let str = `<div class="pillar" style="position: relative;">`;
             
             if (senaraiIbubapa.length > 0) {
                 let classIbuBapa = "couple-wrapper has-children";
                 if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
                 
-                str += `<div class="${classIbuBapa}">`;
+                // Tambah position: absolute supaya atuk/nenek terapung dan tak tolak kotak isteri di bawah!
+                str += `<div class="${classIbuBapa}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; z-index: 10;">`;
                 
                 let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa/)) || senaraiIbubapa[0];
                 let ibu = senaraiIbubapa.find(ib => ib !== bapa);
@@ -540,7 +542,8 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        let htmlLayout = '<div class="tree"><ul><li>';
+        // TAMBAH padding-top: 130px supaya kotak atuk/nenek tak terpotong kat atas skrin
+        let htmlLayout = '<div class="tree" style="padding-top: 130px;"><ul><li>';
         
         let adaAnak = anakAnak.length > 0;
         let adaPasangan = pasangan.length > 0;
@@ -556,10 +559,9 @@ window.bukaPreview = async () => {
             htmlLayout += binaTiang(diriSendiri, ibuBapa, 'diri', datukNenek);
         }
         
-        // 2. Tiang Pasangan (Isu Poligami Diselesaikan Di Sini)
+        // 2. Tiang Pasangan 
         if (adaPasangan) {
             pasangan.forEach((p, index) => {
-                // Berikan mertua kepada isteri PERTAMA sahaja. Isteri kedua akan dapat tiang kosong di atasnya.
                 let mertuaIsteriIni = (index === 0) ? mertua : [];
                 htmlLayout += binaTiang(p, mertuaIsteriIni, 'pasangan', []);
             });
