@@ -238,15 +238,32 @@
                     <label>Hubungan (dengan anda)</label>
                     <select id="tambahHubungan" required>
                         <option value="">-- Pilih Hubungan --</option>
-                        <option value="Datuk">Datuk (Percuma)</option>
-                        <option value="Nenek">Nenek (Percuma)</option>
-                        <option value="Ayah">Ayah (Percuma)</option>
-                        <option value="Ibu">Ibu (Percuma)</option>
-                        <option value="Suami">Suami (Percuma)</option>
-                        <option value="Isteri">Isteri (Percuma)</option>
-                        <option value="Anak">Anak (5 Terawal Percuma, Seterusnya 1 Kredit)</option>
-                        <option value="Bapa Mertua">Bapa Mertua (Tolak 5 Kredit)</option>
-                        <option value="Ibu Mertua">Ibu Mertua (Tolak 5 Kredit)</option>
+                        
+                        <optgroup label="Leluhur & Moyang (Percuma)">
+                            <option value="Cilawagi">Cilawagi (Peringkat ke-5) - Percuma</option>
+                            <option value="Cakawari">Cakawari (Datuk kpd Moyang) - Percuma</option>
+                            <option value="Buyut">Buyut (Ibubapa kpd Moyang) - Percuma</option>
+                            <option value="Moyang">Moyang (Ibubapa kpd Datuk) - Percuma</option>
+                            <option value="Datuk">Datuk - Percuma</option>
+                            <option value="Nenek">Nenek - Percuma</option>
+                            <option value="Ayah">Ayah - Percuma</option>
+                            <option value="Ibu">Ibu - Percuma</option>
+                        </optgroup>
+                        
+                        <optgroup label="Keluarga Utama & In-Law">
+                            <option value="Suami">Suami - Percuma</option>
+                            <option value="Isteri">Isteri - Percuma</option>
+                            <option value="Bapa Mertua">Bapa Mertua - Tolak 5 Kredit</option>
+                            <option value="Ibu Mertua">Ibu Mertua - Tolak 5 Kredit</option>
+                        </optgroup>
+                        
+                        <optgroup label="Keturunan & Generasi Bawah">
+                            <option value="Anak">Anak (5 Terawal Percuma, Ke-6: 1 Kredit)</option>
+                            <option value="Cucu">Cucu - Tolak 1 Kredit</option>
+                            <option value="Cicit">Cicit - Tolak 1 Kredit</option>
+                            <option value="Piut / Cece">Piut / Cece - Tolak 1 Kredit</option>
+                            <option value="Oneng-oneng">Oneng-oneng - Tolak 1 Kredit</option>
+                        </optgroup>
                     </select>
                 </div>
                 
