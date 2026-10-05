@@ -60,20 +60,19 @@
         .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; }
         .btn-primary { width: 100%; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-/* --- GAYA PREVIEW SALASILAH (ENJIN FLEXBOX V7 - ANTI TUMPANG TINDIH) --- */
+/* --- GAYA PREVIEW SALASILAH (ENJIN FLEXBOX KEBAL V8) --- */
         .modal-preview-box { width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #fdfdfd; }
         .kertas-cetakan { flex: 1; background: #f4efe9; overflow: auto; padding: 40px; border-radius: 8px; margin-top: 15px; border: 1px solid #e5e0d8; }
         
-        /* Enjin Utama Pokok untuk Anak-anak (Bahagian Bawah) */
-        .tree { display: flex; justify-content: center; padding-top: 20px; padding-bottom: 40px; font-family: Arial, sans-serif; }
-        .tree > ul { padding-top: 0; } 
-        .tree ul { padding-top: 30px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 30px 0 0 0; }
+        /* Container Pokok - Wajib Max Content supaya tak kuncup */
+        .tree { display: flex; justify-content: center; padding-top: 20px; padding-bottom: 40px; font-family: Arial, sans-serif; min-width: max-content; }
+        .tree ul { padding-top: 30px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; min-width: max-content; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 30px 10px 0 10px; min-width: max-content; }
         
         /* Garisan Mendatar (Adik-Beradik) */
         .tree li::before, .tree li::after {
             content: ''; position: absolute; top: 0; right: 50%;
-            border-top: 1px solid #a0a0a0; width: 50%; height: 30px; z-index: 0;
+            border-top: 1px solid #a0a0a0; width: 50%; height: 30px; z-index: 1;
         }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #a0a0a0; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
@@ -84,45 +83,50 @@
         /* Garisan Menegak ke bawah dari ruang anak */
         .tree ul ul::before {
             content: ''; position: absolute; top: 0; left: 50%;
-            border-left: 1px solid #a0a0a0; width: 0; height: 30px; z-index: 0; transform: translateX(-50%);
+            border-left: 1px solid #a0a0a0; width: 0; height: 30px; z-index: 1; transform: translateX(-50%);
         }
 
-        /* --- BEKAS PASANGAN & TIANG INDIVIDU (NORMAL FLOW) --- */
+        /* --- STRUKTUR FLEXBOX MURNI (ANTI BERTINDIH) --- */
         .couple-wrapper { 
             display: flex; justify-content: center; align-items: flex-end; 
-            position: relative; margin: 0 auto;
+            position: relative; margin: 0 auto; min-width: max-content; /* Anti-tindih */
         }
         
         .pillar { 
             position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-            padding: 0 15px; /* Jarak dinamik antar kad */
+            padding: 0 15px; min-width: max-content; /* Anti-tindih */
         }
         
-        /* Garisan Mendatar Suami & Isteri (Cantum tepat di tengah lebar tiang) */
+        /* Jarak antara ibu bapa dan anak */
+        .ancestor-couple { padding-bottom: 30px; }
+        
+        /* Garisan Mendatar Suami & Isteri */
         .couple-wrapper.has-spouse > .pillar::before {
             content: ''; position: absolute;
-            bottom: 27px; /* Titik tengah kad */
-            width: 50%; border-bottom: 1px solid #a0a0a0; z-index: 0;
+            bottom: 27px; width: 50%; border-bottom: 1px solid #a0a0a0; z-index: 1;
         }
         .couple-wrapper.has-spouse > .pillar:first-child::before { right: 0; }
         .couple-wrapper.has-spouse > .pillar:last-child::before { left: 0; }
         
-        /* Garisan Menegak Turun Ke Anak (Dari Ibu Bapa) */
-        .couple-wrapper.has-children { 
-            padding-bottom: 30px; /* Jarak dari ibu bapa ke anak */
-        }
-        .couple-wrapper.has-children::after {
+        /* Garisan Menegak Turun (IbuBapa ke Anak) */
+        .ancestor-couple.has-children::after {
             content: ''; position: absolute;
-            bottom: 0; left: 50%; 
-            height: 57px; /* 30px padding + 27px ke tengah kad = 57px */
-            border-left: 1px solid #a0a0a0; z-index: 0; 
-            transform: translateX(-50%);
+            bottom: 0; left: 50%; height: 57px; /* 30px padding + 27px tengah kad */
+            border-left: 1px solid #a0a0a0; z-index: 1; transform: translateX(-50%);
+        }
+
+        /* Garisan Menegak Turun (Diri Sendiri & Pasangan Utama ke Anak-anak) */
+        .main-couple.has-children::after {
+            content: ''; position: absolute;
+            bottom: 0; left: 50%; height: 27px; 
+            border-left: 1px solid #a0a0a0; z-index: 1; transform: translateX(-50%);
         }
 
         /* --- REKAAN KAD MYHERITAGE --- */
         .mh-card {
             display: flex; align-items: stretch; text-align: left;
-            border-radius: 5px; width: 190px; height: 55px;
+            border-radius: 5px; width: 190px; height: 55px; 
+            flex-shrink: 0; /* WAJIB: Halang kotak dari mengecil */
             box-shadow: 1px 2px 5px rgba(0,0,0,0.1);
             position: relative; z-index: 2; border: 1px solid rgba(0,0,0,0.1);
             background: #ffffff;
