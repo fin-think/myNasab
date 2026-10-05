@@ -280,7 +280,7 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (GAYA MYHERITAGE) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (KLON MYHERITAGE) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
@@ -305,44 +305,23 @@ window.bukaPreview = async () => {
             else if (d.relationship === "Anak") anakAnak.push(d);
         });
 
-        // 2. Pembina Kad MyHeritage
         const binaKotak = (ahli, kategory) => {
-            // Tentukan jantina/warna secara logik melalui gelaran hubungan
-            let tema = 'theme-neutral';
-            const hub = (ahli.relationship || '').toLowerCase();
-           
-            if (ahli.gender === 'L') {
-                tema = 'theme-lelaki';
-            } 
-            else if (ahli.gender === 'P') {
-                tema = 'theme-perempuan';
-            } 
-            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) {
-                tema = 'theme-lelaki';   // fallback data lama
-            } 
-            else if (hub.includes('ibu') || hub.includes('isteri')) {
-                tema = 'theme-perempuan';
-            } 
-            else if (kategory === 'diri' || hub.includes('anak')) {
-                tema = 'theme-neutral'; // Jika tiada set jantina khusus, guna hijau
-            }
+            let tema = 'theme-neutral'; 
+            let hub = ahli.relationship.toLowerCase();
+            
+            if (ahli.gender === 'L') tema = 'theme-lelaki';
+            else if (ahli.gender === 'P') tema = 'theme-perempuan';
+            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) tema = 'theme-lelaki';
+            else if (hub.includes('ibu') || hub.includes('isteri')) tema = 'theme-perempuan';
+            else if (kategory === 'diri' || hub.includes('anak')) tema = 'theme-neutral';
 
-            // Ekstrak Tahun Sahaja dari Tarikh Lahir
-            let infoTahun = '';
-            if (ahli.dob) {
-                const tahunLahir = ahli.dob.split('-')[0];
-                infoTahun = `Lahir: ${tahunLahir}`;
-            }
-
-            // Ikon Siluet Default (Kosmetik Placeholder)
+            let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
             const ikonSiluet = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
 
             return `
                 <div class="mh-card ${tema}">
                     <div class="badge-mini">${ahli.relationship}</div>
-                    <div class="mh-avatar">
-                        ${ikonSiluet}
-                    </div>
+                    <div class="mh-avatar">${ikonSiluet}</div>
                     <div class="mh-details">
                         <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
                         <p class="mh-info">${infoTahun}</p>
@@ -351,60 +330,64 @@ window.bukaPreview = async () => {
             `;
         };
 
-        // 3. Logik Susunan HTML
         let htmlLayout = '<div class="tree"><ul>';
 
+        // Fungsi bina Diri Sendiri & Isteri, lalu sambung ke Anak
         const renderDiriDanAnak = () => {
             let str = `<li>`;
-            const jumlahPasangan = pasangan.length + (diriSendiri ? 1 : 0);
-            const classCouple = jumlahPasangan > 1 ? "couple-box connected" : "couple-box";
+            let adaAnak = anakAnak.length > 0;
+            let classWrapper = "couple-wrapper" + (adaAnak ? " has-children" : "");
             
-            str += `<div class="${classCouple}">`;
+            // Masukkan anda dan pasangan di dalam wrapper yang sama (Side-by-Side)
+            str += `<div class="${classWrapper}">`;
             if (diriSendiri) str += binaKotak(diriSendiri, 'diri');
             pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
+            // Jika single (tiada pasangan), letak 'single' supaya tiada garisan sambung
+            if (pasangan.length === 0) str = str.replace('couple-wrapper', 'couple-wrapper single');
             str += `</div>`;
             
-            if (anakAnak.length > 0) {
+            // Papar Anak di bawahnya
+            if (adaAnak) {
                 str += `<ul>`;
-                anakAnak.forEach(anak => { str += `<li>${binaKotak(anak, 'anak')}</li>`; });
+                anakAnak.forEach(anak => { 
+                    str += `<li><div class="couple-wrapper single">${binaKotak(anak, 'anak')}</div></li>`; 
+                });
                 str += `</ul>`;
             }
             str += `</li>`;
             return str;
         }
 
+        // --- MULA DARI IBU BAPA (JIKA ADA) ---
         if (ibuBapa.length > 0) {
             htmlLayout += `<li>`;
-            const classCoupleIbuBapa = ibuBapa.length > 1 ? "couple-box connected" : "couple-box";
-            htmlLayout += `<div class="${classCoupleIbuBapa}">`;
-            ibuBapa.forEach(ib => htmlLayout += binaKotak(ib, 'ibubapa'));
+            let classWrapperIbuBapa = "couple-wrapper has-children";
+            if (ibuBapa.length === 1) classWrapperIbuBapa += " single";
+            
+            htmlLayout += `<div class="${classWrapperIbuBapa}">`;
+            
+            let bapa = ibuBapa.find(ib => ib.relationship.toLowerCase().includes('ayah') || ib.relationship.toLowerCase().includes('bapa')) || ibuBapa[0];
+            let ibu = ibuBapa.find(ib => ib !== bapa);
+            
+            htmlLayout += binaKotak(bapa, 'ibubapa');
+            if (ibu) htmlLayout += binaKotak(ibu, 'ibubapa');
+            
             htmlLayout += `</div>`;
             
+            // Diri Sendiri akan berada di bawah Ibubapa
             htmlLayout += `<ul>`;
             htmlLayout += renderDiriDanAnak();
             htmlLayout += `</ul>`;
             htmlLayout += `</li>`;
         } else {
+            // Jika tiada Ibu Bapa, Diri Sendiri adalah Akar
             htmlLayout += renderDiriDanAnak();
         }
 
         htmlLayout += '</ul></div>';
-        
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
 
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${error.message}</p>`;
     }
-};
-
-window.tukarSaizKertas = () => {
-    const saiz = document.getElementById('pilihanSaizKertas').value;
-    let st = document.getElementById('stylePage');
-    if (!st) { st = document.createElement('style'); st.id = 'stylePage'; document.head.appendChild(st); }
-    st.textContent = `@page { size: ${saiz} landscape; margin: 10mm; }`;
-};
-
-window.cetakSalasilah = () => {
-    window.tukarSaizKertas();
-    window.print();
 };
