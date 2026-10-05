@@ -50,19 +50,19 @@
         .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; }
         .btn-primary { width: 100%; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-/* --- GAYA PREVIEW SALASILAH (KLON TEPAT MYHERITAGE) --- */
+/* --- GAYA PREVIEW SALASILAH (ENJIN TIANG / PILLAR V4) --- */
         .modal-preview-box { width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #fdfdfd; }
         .kertas-cetakan { flex: 1; background: #f4efe9; overflow: auto; padding: 40px; border-radius: 8px; margin-top: 15px; border: 1px solid #e5e0d8; }
         
-        /* Enjin Pokok CSS */
+        /* Enjin Utama Pokok */
         .tree { display: flex; justify-content: center; padding-top: 20px; padding-bottom: 40px; font-family: Arial, sans-serif; }
-        .tree ul { padding-top: 20px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 8px 0 8px; }
+        .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 25px 0 0 0; }
         
         /* Garisan Mendatar (Adik-Beradik) */
         .tree li::before, .tree li::after {
             content: ''; position: absolute; top: 0; right: 50%;
-            border-top: 1px solid #a0a0a0; width: 50%; height: 20px; z-index: 1;
+            border-top: 1px solid #a0a0a0; width: 50%; height: 25px; z-index: -1;
         }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #a0a0a0; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
@@ -70,30 +70,38 @@
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
         .tree li:last-child::before { border-right: 1px solid #a0a0a0; border-radius: 0; }
         
-        /* Garisan Menegak ke bawah (Untuk Anak-Anak) */
+        /* Garisan Menegak ke bawah dari ruang anak */
         .tree ul ul::before {
             content: ''; position: absolute; top: 0; left: 50%;
-            border-left: 1px solid #a0a0a0; width: 0; height: 20px; z-index: 1;
+            border-left: 1px solid #a0a0a0; width: 0; height: 25px; z-index: -1; transform: translateX(-50%);
         }
 
-        /* --- KOTAK BEKAS PASANGAN (Suami & Isteri) --- */
+        /* --- BEKAS PASANGAN & TIANG INDIVIDU --- */
         .couple-wrapper { 
-            display: inline-flex; align-items: center; position: relative; gap: 24px; margin: 0 auto;
+            display: flex; justify-content: center; align-items: flex-end; 
+            position: relative; margin: 0 auto;
         }
         
-        /* Garisan Lurus Mendatar Penyambung Suami & Isteri */
-        .couple-wrapper.has-spouse::before {
+        .pillar { 
+            position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            padding: 0 20px; /* Jarak antara kad */
+        }
+        
+        /* Garisan Mendatar Suami & Isteri (Cantum di tengah kad) */
+        .couple-wrapper.has-spouse > .pillar::before {
             content: ''; position: absolute;
-            top: 50%; left: 95px; right: 95px; 
-            border-top: 1px solid #a0a0a0; z-index: -1; 
+            bottom: 27px; /* 27px dari bawah tiang = tepat di tengah kad bersaiz 55px */
+            width: 50%; border-bottom: 1px solid #a0a0a0; z-index: -1;
         }
+        .couple-wrapper.has-spouse > .pillar:first-child::before { right: 0; }
+        .couple-wrapper.has-spouse > .pillar:last-child::before { left: 0; }
         
-        /* Garisan Menegak turun dari TENGAH Mak & Ayah ke anak-anak! */
+        /* Garisan Menegak Turun Ke Anak */
         .couple-wrapper.has-children { padding-bottom: 25px; }
         .couple-wrapper.has-children::after {
             content: ''; position: absolute;
-            top: 50%; left: 50%; 
-            border-left: 1px solid #a0a0a0; height: 50%; z-index: -1;
+            bottom: 0; left: 50%; height: 52px; /* Naik 52px tembus ke tengah kad ibubapa */
+            border-left: 1px solid #a0a0a0; z-index: -1; transform: translateX(-50%);
         }
 
         /* --- REKAAN KAD MYHERITAGE --- */
@@ -119,7 +127,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        /* Tema Warna MyHeritage */
+        /* Tema Warna */
         .theme-lelaki { background-color: #aed9e0; border-color: #8ab6be; }
         .theme-perempuan { background-color: #f8c8d4; border-color: #d19ba9; }
         .theme-neutral { background-color: #c9e4ca; border-color: #a4c4a6; }
