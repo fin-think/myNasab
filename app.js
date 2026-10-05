@@ -166,7 +166,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (ANTI-DOUBLE CLICK) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar, jantina) => {
     if (!penggunaSemasa) return;
     
     // Kunci butang supaya pengguna tak tertekan banyak kali (punca notis pelik)
@@ -217,6 +217,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             relationship: hubungan,
             dob: dob,
             phone: telefon,
+            gender: jantina,
             city: bandar,
             state: negeri,
             photo_url: urlGambar,
@@ -234,132 +235,6 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
     } finally {
         // Buka balik kunci butang selepas proses tamat
         if(btnSubmit) btnSubmit.disabled = false;
-    }
-};
-
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (LOGIK POLIGAMI) ---
-window.bukaPreview = async () => {
-    if (!penggunaSemasa) return;
-    
-    document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok salasilah...</p>';
-    document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
-
-    try {
-        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
-        const querySnapshot = await getDocs(q);
-        
-        let diriSendiri = null;
-        let pasangan = [];
-        let ibuBapa = [];
-        let anakAnak = [];
-        let mertua = [];
-        let datukNenek = [];
-
-        querySnapshot.forEach((docSnap) => {
-            const d = docSnap.data();
-            let hub = d.relationship.toLowerCase();
-            if (d.is_root) diriSendiri = d;
-            else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
-            else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
-            else if (hub.includes("mertua")) mertua.push(d);
-            else if (hub.includes("datuk") || hub.includes("nenek")) datukNenek.push(d);
-            else if (hub.includes("anak")) anakAnak.push(d);
-        });
-
-        const binaKotak = (ahli, kategory) => {
-            let tema = 'theme-neutral'; 
-            let hub = ahli.relationship.toLowerCase();
-            
-            if (ahli.gender === 'L') tema = 'theme-lelaki';
-            else if (ahli.gender === 'P') tema = 'theme-perempuan';
-            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa') || hub.includes('datuk')) tema = 'theme-lelaki';
-            else if (hub.includes('ibu') || hub.includes('isteri') || hub.includes('nenek')) tema = 'theme-perempuan';
-            else if (kategory === 'diri' || hub.includes('anak')) tema = 'theme-neutral';
-
-            let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
-            
-            let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-            if (ahli.photo_url && ahli.photo_url !== "") {
-                paparanAvatar = `<img src="${ahli.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
-            }
-
-            return `
-                <div class="mh-card ${tema}">
-                    <div class="badge-mini">${ahli.relationship}</div>
-                    <div class="mh-avatar">${paparanAvatar}</div>
-                    <div class="mh-details">
-                        <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
-                        <p class="mh-info">${infoTahun}</p>
-                    </div>
-                </div>
-            `;
-        };
-
-        const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
-            let str = `<div class="pillar">`;
-            
-            if (senaraiIbubapa.length > 0) {
-                let classIbuBapa = "couple-wrapper has-children";
-                if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
-                
-                str += `<div class="${classIbuBapa}">`;
-                
-                let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa/)) || senaraiIbubapa[0];
-                let ibu = senaraiIbubapa.find(ib => ib !== bapa);
-                
-                str += binaTiang(bapa, senaraiDatukNenek, 'ibubapa', []); 
-                if (ibu) str += binaTiang(ibu, [], 'ibubapa', []);
-                
-                str += `</div>`;
-            }
-            
-            str += binaKotak(ahli, kategoryAhli);
-            str += `</div>`;
-            return str;
-        };
-
-        let htmlLayout = '<div class="tree"><ul><li>';
-        
-        let adaAnak = anakAnak.length > 0;
-        let adaPasangan = pasangan.length > 0;
-        
-        let classWrapper = "couple-wrapper";
-        if (adaPasangan) classWrapper += " has-spouse";
-        if (adaAnak) classWrapper += " has-children";
-        
-        htmlLayout += `<div class="${classWrapper}">`;
-        
-        // 1. Tiang Diri Sendiri 
-        if (diriSendiri) {
-            htmlLayout += binaTiang(diriSendiri, ibuBapa, 'diri', datukNenek);
-        }
-        
-        // 2. Tiang Pasangan (Isu Poligami Diselesaikan Di Sini)
-        if (adaPasangan) {
-            pasangan.forEach((p, index) => {
-                // Berikan mertua kepada isteri PERTAMA sahaja. Isteri kedua akan dapat tiang kosong di atasnya.
-                let mertuaIsteriIni = (index === 0) ? mertua : [];
-                htmlLayout += binaTiang(p, mertuaIsteriIni, 'pasangan', []);
-            });
-        }
-        
-        htmlLayout += `</div>`;
-        
-        // 3. Senarai Anak-anak
-        if (adaAnak) {
-            htmlLayout += `<ul>`;
-            anakAnak.forEach(anak => {
-                htmlLayout += `<li><div class="couple-wrapper">${binaTiang(anak, [], 'anak', [])}</div></li>`;
-            });
-            htmlLayout += `</ul>`;
-        }
-        
-        htmlLayout += `</li></ul></div>`;
-        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-
-    } catch (error) {
-        document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${error.message}</p>`;
     }
 };
 
@@ -413,6 +288,7 @@ if(formEdit) {
                 phone: document.getElementById('editAhliTelefon').value,
                 city: document.getElementById('editAhliBandar').value,
                 state: document.getElementById('editAhliNegeri').value,
+                gender: document.getElementById('editAhliJantina').value,
                 updated_at: new Date()
             };
 
@@ -584,4 +460,38 @@ window.bukaPreview = async () => {
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${error.message}</p>`;
     }
+};
+
+// --- 8. SAIZ KERTAS & CETAK ---
+const SAIZ_KERTAS = { A4: { w: 297 }, A3: { w: 420 }, A1: { w: 841 } }; // lebar landscape (mm)
+
+window.tukarSaizKertas = () => {
+    const saiz = document.getElementById('pilihanSaizKertas').value;
+    let st = document.getElementById('stylePage');
+    if (!st) {
+        st = document.createElement('style');
+        st.id = 'stylePage';
+        document.head.appendChild(st);
+    }
+    st.textContent = `@page { size: ${saiz} landscape; margin: 10mm; }`;
+};
+
+window.cetakSalasilah = () => {
+    window.tukarSaizKertas();
+
+    const saiz = document.getElementById('pilihanSaizKertas').value;
+    const ruang = document.getElementById('ruangAutoLayout');
+    const pokok = ruang.querySelector('.tree');
+
+    // Kecilkan pokok automatik jika lebih lebar dari kertas (1mm ≈ 3.78px)
+    if (pokok) {
+        const lebarKertas = (SAIZ_KERTAS[saiz].w - 20) * 3.78;
+        const lebarPokok = pokok.scrollWidth;
+        if (lebarPokok > lebarKertas) ruang.style.zoom = lebarKertas / lebarPokok;
+    }
+
+    // Reset saiz lepas dialog print ditutup
+    window.addEventListener('afterprint', () => { ruang.style.zoom = 1; }, { once: true });
+
+    window.print();
 };
