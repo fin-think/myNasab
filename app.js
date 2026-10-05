@@ -166,7 +166,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (PANTAS & TANPA NOTIFIKASI MENYEMAK) ---
-window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar) => {
+window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId) => {
     if (!penggunaSemasa) return;
     
     const btnSubmit = document.querySelector('#formTambahAhli button[type="submit"]');
@@ -184,7 +184,7 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
     try {
         const snapPengguna = await getDoc(refPengguna);
         const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0; 
-        
+       
         let kosAhli = 0;
         let hubLower = hubungan.toLowerCase();
         
@@ -199,6 +199,17 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
         }
         else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng")) {
             kosAhli = 1; 
+        }
+
+        if (RUJUKAN[hubungan] && !rujukanId) {
+            alert("Sila pilih ibu/bapa kepada siapa. Jika senarai kosong, tambah orang tu dahulu.");
+            return;
+        }
+        
+       if (rujukanId) {
+            const qSama = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("ref_id", "==", rujukanId));
+            const snapSama = await getDocs(qSama);
+            if (snapSama.size >= 2) { alert("Orang ini sudah ada 2 ibu bapa dalam salasilah."); return; }
         }
         
         // Pengiraan Caj Gambar (Hanya jika gambar wujud dan bersaiz lebih 0)
@@ -235,6 +246,7 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             name: nama,
             relationship: hubungan,
             gender: jantina,
+            ref_id: rujukanId || "",
             dob: dob,
             phone: telefon,
             city: bandar,
@@ -248,6 +260,7 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
         alert(`Berjaya! ${nama} direkodkan.`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
+        document.getElementById('groupRujukan').classList.add('hidden');
         window.muatTurunSalasilah(); 
         
     } catch (error) {
@@ -375,9 +388,11 @@ window.bukaPreview = async () => {
         let mertua = [];
         let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
 
+        const semuaId = new Set(querySnapshot.docs.map(s => s.id));
+        
         // Agihan Baldi Generasi
         querySnapshot.forEach((docSnap) => {
-            const d = docSnap.data();
+            const d = { ...docSnap.data(), id: docSnap.id };
             let hub = d.relationship.toLowerCase();
             if (d.is_root) diriSendiri = d;
             else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
@@ -521,9 +536,8 @@ window.bukaPreview = async () => {
                 // Masukkan semua senarai nenek moyang ke atas
                 htmlLayout += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
             } else {
-                // Isteri (atau pasangan) dapat mertua sahaja (jika dia isteri pertama/pasangan utama)
-                let isteriMertua = (idx === 1) ? [mertua] : []; 
-                htmlLayout += binaTiangAtasan(p, isteriMertua, 'pasangan');
+                // Mertua: ikut ref_id; data lama pergi ke pasangan pertama
+                htmlLayout += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
         
@@ -576,4 +590,26 @@ window.cetakSalasilah = () => {
 
     window.addEventListener('afterprint', () => { ruang.style.zoom = 1; }, { once: true });
     setTimeout(() => window.print(), 100); // bagi masa browser susun semula
+};
+
+// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" ---
+const RUJUKAN = {
+    "Datuk": ["Ayah","Ibu"], "Nenek": ["Ayah","Ibu"],
+    "Moyang": ["Datuk","Nenek"], "Buyut": ["Moyang"],
+    "Cakawari": ["Buyut"], "Cilawagi": ["Cakawari"],
+    "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"]
+};
+
+window.siapkanRujukan = async (hubungan) => {
+    const kumpulan = document.getElementById('groupRujukan');
+    const sel = document.getElementById('tambahRujukan');
+    const sasaran = RUJUKAN[hubungan];
+    if (!sasaran || !penggunaSemasa) { kumpulan.classList.add('hidden'); sel.innerHTML = ''; return; }
+
+    const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
+    const pilihan = snap.docs.filter(s => sasaran.includes(s.data().relationship));
+    sel.innerHTML = pilihan.length
+        ? pilihan.map(s => `<option value="${s.id}">${s.data().name} (${s.data().relationship})</option>`).join('')
+        : `<option value="">-- Tambah ${sasaran[0]} dahulu --</option>`;
+    kumpulan.classList.remove('hidden');
 };
