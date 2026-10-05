@@ -517,16 +517,16 @@ window.bukaPreview = async () => {
             `;
         };
 
-        // FUNGSI BINA TIANG (DIKEMASKINI UNTUK ELAK TOLAK PASANGAN)
+        // FUNGSI BINA TIANG (TANPA POSITION ABSOLUTE)
         const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
-            let str = `<div class="pillar" style="position: relative;">`;
+            let str = `<div class="pillar">`; // Tidak ada lagi position relative/absolute
             
             if (senaraiIbubapa.length > 0) {
                 let classIbuBapa = "couple-wrapper has-children";
                 if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
                 
-                // Tambah position: absolute supaya atuk/nenek terapung dan tak tolak kotak isteri di bawah!
-                str += `<div class="${classIbuBapa}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; z-index: 10;">`;
+                // Disusun secara standar untuk memaksa Flexbox memberikan jarak
+                str += `<div class="${classIbuBapa}">`;
                 
                 let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa/)) || senaraiIbubapa[0];
                 let ibu = senaraiIbubapa.find(ib => ib !== bapa);
@@ -542,8 +542,8 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        // TAMBAH padding-top: 130px supaya kotak atuk/nenek tak terpotong kat atas skrin
-        let htmlLayout = '<div class="tree" style="padding-top: 130px;"><ul><li>';
+        // SUSUNAN HTML UTAMA
+        let htmlLayout = '<div class="tree"><ul><li>';
         
         let adaAnak = anakAnak.length > 0;
         let adaPasangan = pasangan.length > 0;
