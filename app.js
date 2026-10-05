@@ -163,7 +163,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, jantina) => {
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
@@ -172,7 +172,16 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, jan
         const bakiTerkini = snapPengguna.data().credit_balance;
         
         let kosKredit = 0;
-        if (hubungan === "Anak") kosKredit = 1;
+        
+        // Logika 5 Anak Percuma
+        if (hubungan === "Anak") {
+            const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
+            const snapAnak = await getDocs(qAnak);
+            if (snapAnak.size >= 5) {
+                kosKredit = 1; // Caj 1 kredit jika anak ke-6 dan ke atas
+            }
+        }
+        
         if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit = 5;
         
         if (bakiTerkini < kosKredit) {
@@ -193,7 +202,6 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, jan
             phone: telefon,
             city: bandar,
             state: negeri,
-            gender: jantina,
             is_root: false,
             created_at: new Date()
         });
@@ -280,7 +288,7 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (KLON MYHERITAGE) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
@@ -296,13 +304,18 @@ window.bukaPreview = async () => {
         let pasangan = [];
         let ibuBapa = [];
         let anakAnak = [];
+        let mertua = [];
+        let datukNenek = [];
 
         querySnapshot.forEach((docSnap) => {
             const d = docSnap.data();
+            let hub = d.relationship.toLowerCase();
             if (d.is_root) diriSendiri = d;
-            else if (d.relationship === "Suami" || d.relationship === "Isteri") pasangan.push(d);
-            else if (d.relationship === "Ayah" || d.relationship === "Ibu" || d.relationship === "Bapa Mertua" || d.relationship === "Ibu Mertua") ibuBapa.push(d);
-            else if (d.relationship === "Anak") anakAnak.push(d);
+            else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
+            else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
+            else if (hub.includes("mertua")) mertua.push(d);
+            else if (hub.includes("datuk") || hub.includes("nenek")) datukNenek.push(d);
+            else if (hub.includes("anak")) anakAnak.push(d);
         });
 
         const binaKotak = (ahli, kategory) => {
@@ -311,8 +324,8 @@ window.bukaPreview = async () => {
             
             if (ahli.gender === 'L') tema = 'theme-lelaki';
             else if (ahli.gender === 'P') tema = 'theme-perempuan';
-            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa')) tema = 'theme-lelaki';
-            else if (hub.includes('ibu') || hub.includes('isteri')) tema = 'theme-perempuan';
+            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa') || hub.includes('datuk')) tema = 'theme-lelaki';
+            else if (hub.includes('ibu') || hub.includes('isteri') || hub.includes('nenek')) tema = 'theme-perempuan';
             else if (kategory === 'diri' || hub.includes('anak')) tema = 'theme-neutral';
 
             let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
@@ -332,24 +345,36 @@ window.bukaPreview = async () => {
 
         let htmlLayout = '<div class="tree"><ul>';
 
-        // Fungsi Rangka Diri Sendiri & Anak
         const renderDiriDanAnak = () => {
             let str = `<li>`;
             let adaAnak = anakAnak.length > 0;
             let adaPasangan = pasangan.length > 0;
             
-            // Pengesan status 'Bekas Pasangan'
             let classWrapper = "couple-wrapper";
             if (adaPasangan) classWrapper += " has-spouse";
             if (adaAnak) classWrapper += " has-children";
             
-            // Letak anda dan isteri dalam satu bekas (bersebelahan)
             str += `<div class="${classWrapper}">`;
             if (diriSendiri) str += binaKotak(diriSendiri, 'diri');
-            pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
+            
+            if (adaPasangan) {
+                str += `<div style="position: relative;">`;
+                
+                // Masukkan Mertua di atas Pasangan
+                if (mertua.length > 0) {
+                    let classMertua = "couple-wrapper has-children";
+                    if (mertua.length > 1) classMertua += " has-spouse";
+                    str += `<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px;">
+                                <div class="${classMertua}">`;
+                    mertua.forEach(m => str += binaKotak(m, 'ibubapa'));
+                    str += `</div></div>`;
+                }
+
+                pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
+                str += `</div>`;
+            }
             str += `</div>`;
             
-            // Garisan dari bekas tadi terus turun ke anak-anak (Center automatik)
             if (adaAnak) {
                 str += `<ul>`;
                 anakAnak.forEach(anak => { 
@@ -361,29 +386,30 @@ window.bukaPreview = async () => {
             return str;
         }
 
-        // --- MULA BINA DARI IBU BAPA ---
         if (ibuBapa.length > 0) {
             htmlLayout += `<li>`;
             
-            // Susun Ayah sebelah Ibu
-            let bapa = ibuBapa.find(ib => ib.relationship.toLowerCase().includes('ayah') || ib.relationship.toLowerCase().includes('bapa')) || ibuBapa[0];
-            let ibu = ibuBapa.find(ib => ib !== bapa);
-            
-            let classWrapperIbuBapa = "couple-wrapper has-children"; // Sentiasa true sbb kita (Diri Sendiri) adalah anak mereka
-            if (ibu) classWrapperIbuBapa += " has-spouse";
+            // Tambah Datuk & Nenek di atas Ibu Bapa
+            if (datukNenek.length > 0) {
+                let classDatuk = "couple-wrapper has-children";
+                if (datukNenek.length > 1) classDatuk += " has-spouse";
+                htmlLayout += `<div class="${classDatuk}" style="margin-bottom: 25px;">`;
+                datukNenek.forEach(dn => htmlLayout += binaKotak(dn, 'ibubapa'));
+                htmlLayout += `</div>`;
+            }
+
+            let classWrapperIbuBapa = "couple-wrapper has-children";
+            if (ibuBapa.length > 1) classWrapperIbuBapa += " has-spouse";
             
             htmlLayout += `<div class="${classWrapperIbuBapa}">`;
-            htmlLayout += binaKotak(bapa, 'ibubapa');
-            if (ibu) htmlLayout += binaKotak(ibu, 'ibubapa');
+            ibuBapa.forEach(ib => htmlLayout += binaKotak(ib, 'ibubapa'));
             htmlLayout += `</div>`;
             
-            // Kita (Diri Sendiri) diletakkan di bawah ibu bapa
             htmlLayout += `<ul>`;
             htmlLayout += renderDiriDanAnak();
             htmlLayout += `</ul>`;
             htmlLayout += `</li>`;
         } else {
-            // Jika tiada mak ayah direkod, mula dari Diri Sendiri
             htmlLayout += renderDiriDanAnak();
         }
 
