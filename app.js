@@ -5,6 +5,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// TAMBAH MODULE STORAGE INI
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA7SW4U--evGtfRyPz5Feh3mEN8MF92gTg",
@@ -20,6 +22,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app); // INISIALISASI STORAGE
 let penggunaSemasa = null;
 
 // --- 1. PENGURUSAN SESI ---
@@ -162,8 +165,8 @@ window.padamAhli = async (idAhli) => {
     }
 };
 
-// --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => {
+// --- FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT GAMBAR) ---
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
@@ -177,23 +180,37 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => 
         if (hubungan === "Anak") {
             const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
             const snapAnak = await getDocs(qAnak);
-            if (snapAnak.size >= 5) {
-                kosKredit = 1; // Caj 1 kredit jika anak ke-6 dan ke atas
-            }
+            if (snapAnak.size >= 5) kosKredit += 1; // Caj 1 kredit untuk anak ke-6
         }
         
-        if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit = 5;
+        if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit += 5;
+        
+        // JIKA ADA UPLOAD GAMBAR, TAMBAH CAJ 1 KREDIT
+        if (failGambar) kosKredit += 1;
         
         if (bakiTerkini < kosKredit) {
-            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit. Sila tambah nilai.`);
+            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit (termasuk caj gambar jika ada). Sila tambah nilai.`);
             return;
         }
         
+        // Tolak kredit dari Wallet
         if (kosKredit > 0) {
             await updateDoc(refPengguna, { credit_balance: increment(-kosKredit) });
             document.getElementById('creditBalance').innerText = bakiTerkini - kosKredit;
         }
+
+        // Proses Upload Gambar ke Firebase Storage
+        let urlGambar = "";
+        if (failGambar) {
+            document.getElementById('modalTambahAhli').classList.add('hidden'); // Sembunyikan modal sementara upload
+            alert("Sedang memuat naik gambar dan menyimpan data. Sila tunggu sebentar...");
+            
+            const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
+            await uploadBytes(storageRef, failGambar);
+            urlGambar = await getDownloadURL(storageRef);
+        }
         
+        // Simpan Data Ahli ke Firestore
         await addDoc(collection(db, "mynasab_nodes"), {
             owner_uid: penggunaSemasa.uid,
             name: nama,
@@ -202,6 +219,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri) => 
             phone: telefon,
             city: bandar,
             state: negeri,
+            photo_url: urlGambar, // Masukkan pautan gambar
             is_root: false,
             created_at: new Date()
         });
@@ -250,33 +268,56 @@ window.bukaModalEdit = async (idKotak) => {
     }
 };
 
+// --- LOGIK EDIT AHLI (UNTUK GAMBAR) ---
 const formEdit = document.getElementById('formEditAhli');
 if(formEdit) {
     formEdit.addEventListener('submit', async (e) => {
         e.preventDefault();
         const idKotak = document.getElementById('editAhliId').value;
         const groupAkaun = document.getElementById('groupEditAkaun');
+        const failGambarEdit = document.getElementById('editAhliGambar').files[0];
         
         try {
-            // Jika Diri Sendiri diedit, kita kemas kini Nama Akaun Keluarga di database berasingan
-            if (!groupAkaun.classList.contains('hidden')) {
-                const namaAkaunBaru = document.getElementById('editAkaunKeluarga').value;
-                await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), {
-                    name: namaAkaunBaru
-                });
-                document.getElementById('treeNameDisplay').innerText = namaAkaunBaru; // Kemaskini nama di atas penjuru kanan
-            }
-
-            // Kemas kini data Individu
-            await updateDoc(doc(db, "mynasab_nodes", idKotak), {
+            let dataUpdate = {
                 name: document.getElementById('editAhliNama').value,
                 dob: document.getElementById('editAhliDob').value,
                 phone: document.getElementById('editAhliTelefon').value,
                 city: document.getElementById('editAhliBandar').value,
                 state: document.getElementById('editAhliNegeri').value,
-                gender: document.getElementById('editAhliJantina').value,
                 updated_at: new Date()
-            });
+            };
+
+            // JIKA DIA UPLOAD GAMBAR BARU MASA EDIT
+            if (failGambarEdit) {
+                const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
+                const snapPengguna = await getDoc(refPengguna);
+                const bakiTerkini = snapPengguna.data().credit_balance;
+                
+                if (bakiTerkini < 1) {
+                    alert("Anda tiada kredit yang cukup (1 Kredit diperlukan) untuk menukar gambar.");
+                    return;
+                }
+                
+                alert("Sedang memuat naik gambar baru. Sila tunggu...");
+                // Tolak 1 kredit
+                await updateDoc(refPengguna, { credit_balance: increment(-1) });
+                document.getElementById('creditBalance').innerText = bakiTerkini - 1;
+
+                // Upload
+                const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambarEdit.name}`);
+                await uploadBytes(storageRef, failGambarEdit);
+                dataUpdate.photo_url = await getDownloadURL(storageRef);
+            }
+
+            // Kemas kini Nama Akaun Jika Diri Sendiri
+            if (!groupAkaun.classList.contains('hidden')) {
+                const namaAkaunBaru = document.getElementById('editAkaunKeluarga').value;
+                await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), { name: namaAkaunBaru });
+                document.getElementById('treeNameDisplay').innerText = namaAkaunBaru; 
+            }
+
+            // Kemas kini Firestore
+            await updateDoc(doc(db, "mynasab_nodes", idKotak), dataUpdate);
             
             alert("Profil berjaya dikemas kini!");
             document.getElementById('modalEditAhli').classList.add('hidden');
@@ -318,7 +359,7 @@ window.bukaPreview = async () => {
             else if (hub.includes("anak")) anakAnak.push(d);
         });
 
-        const binaKotak = (ahli, kategory) => {
+       const binaKotak = (ahli, kategory) => {
             let tema = 'theme-neutral'; 
             let hub = ahli.relationship.toLowerCase();
             
@@ -329,12 +370,18 @@ window.bukaPreview = async () => {
             else if (kategory === 'diri' || hub.includes('anak')) tema = 'theme-neutral';
 
             let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
-            const ikonSiluet = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            
+            // JIKA ADA GAMBAR, TUNJUK GAMBAR. JIKA TIADA, TUNJUK SILUET.
+            let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            
+            if (ahli.photo_url && ahli.photo_url !== "") {
+                paparanAvatar = `<img src="${ahli.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
 
             return `
                 <div class="mh-card ${tema}">
                     <div class="badge-mini">${ahli.relationship}</div>
-                    <div class="mh-avatar">${ikonSiluet}</div>
+                    <div class="mh-avatar">${paparanAvatar}</div>
                     <div class="mh-details">
                         <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
                         <p class="mh-info">${infoTahun}</p>
