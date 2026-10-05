@@ -165,11 +165,10 @@ window.padamAhli = async (idAhli) => {
     }
 };
 
-// --- 5. FUNGSI TAMBAH AHLI BARU (ANTI-DOUBLE CLICK) ---
-window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar, jantina) => {
+// --- 5. FUNGSI TAMBAH AHLI BARU (CAJ GENERASI BAWAH) ---
+window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
     if (!penggunaSemasa) return;
     
-    // Kunci butang supaya pengguna tak tertekan banyak kali (punca notis pelik)
     const btnSubmit = document.querySelector('#formTambahAhli button[type="submit"]');
     if(btnSubmit) btnSubmit.disabled = true;
 
@@ -180,7 +179,9 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
         const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0; 
         
         let kosAhli = 0;
+        let hubLower = hubungan.toLowerCase();
         
+        // Logik Harga Ahli
         if (hubungan === "Anak") {
             const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
             const snapAnak = await getDocs(qAnak);
@@ -189,14 +190,17 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
         else if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") {
             kosAhli = 5;
         }
+        else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng")) {
+            kosAhli = 1; // Caj wajib 1 kredit
+        }
         
         let kosGambar = failGambar ? 1 : 0;
         let jumlahKos = kosAhli + kosGambar;
         
         if (bakiTerkini < jumlahKos) {
-            alert(`Baki kredit anda tidak mencukupi!\n\n• Caj Tambah Ahli: ${kosAhli} Kredit\n• Caj Muat Naik Gambar: ${kosGambar} Kredit\n• Jumlah Diperlukan: ${jumlahKos} Kredit\n\nBaki Kredit Anda: ${bakiTerkini} Kredit\nSila tambah nilai kredit anda.`);
+            alert(`Baki kredit tidak mencukupi!\n\n• Caj Tambah Ahli: ${kosAhli} Kredit\n• Caj Gambar: ${kosGambar} Kredit\n• Jumlah Diperlukan: ${jumlahKos} Kredit\n\nBaki Semasa: ${bakiTerkini} Kredit\nSila tambah nilai.`);
             if(btnSubmit) btnSubmit.disabled = false;
-            return; // Hentikan fungsi terus di sini
+            return; 
         }
         
         if (jumlahKos > 0) {
@@ -206,6 +210,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
 
         let urlGambar = "";
         if (failGambar) {
+            alert("Sedang memuat naik gambar. Sila tunggu sebentar...");
             const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
             await uploadBytes(storageRef, failGambar);
             urlGambar = await getDownloadURL(storageRef);
@@ -225,7 +230,7 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             created_at: new Date()
         });
         
-        alert(`Berjaya! ${nama} telah ditambah ke dalam salasilah.`);
+        alert(`Berjaya! ${nama} direkodkan.`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
         window.muatTurunSalasilah(); 
@@ -233,7 +238,6 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
     } catch (error) {
         alert("Gagal menambah data: " + error.message);
     } finally {
-        // Buka balik kunci butang selepas proses tamat
         if(btnSubmit) btnSubmit.disabled = false;
     }
 };
@@ -334,12 +338,12 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (FLEXBOX KEBAL) ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (GENERASI PENUH & UMUR) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
     document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok salasilah...</p>';
+    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok keturunan...</p>';
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -348,11 +352,11 @@ window.bukaPreview = async () => {
         
         let diriSendiri = null;
         let pasangan = [];
-        let ibuBapa = [];
-        let anakAnak = [];
+        let ibuBapa = [], datukNenek = [], moyang = [], buyut = [], cakawari = [], cilawagi = [];
         let mertua = [];
-        let datukNenek = [];
+        let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
 
+        // Agihan Baldi Generasi
         querySnapshot.forEach((docSnap) => {
             const d = docSnap.data();
             let hub = d.relationship.toLowerCase();
@@ -361,8 +365,24 @@ window.bukaPreview = async () => {
             else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
             else if (hub.includes("mertua")) mertua.push(d);
             else if (hub.includes("datuk") || hub.includes("nenek")) datukNenek.push(d);
-            else if (hub.includes("anak")) anakAnak.push(d);
+            else if (hub.includes("moyang")) moyang.push(d);
+            else if (hub.includes("buyut")) buyut.push(d);
+            else if (hub.includes("cakawari")) cakawari.push(d);
+            else if (hub.includes("cilawagi")) cilawagi.push(d);
+            else if (hub === "anak") anakAnak.push(d);
+            else if (hub === "cucu") cucu.push(d);
+            else if (hub === "cicit") cicit.push(d);
+            else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
+            else if (hub.includes("oneng")) oneng.push(d);
         });
+
+        // Pengiraan Umur Berdasarkan 2026
+        const kiraUmur = (dobStr) => {
+            if (!dobStr) return '';
+            const tahunLahir = parseInt(dobStr.split('-')[0], 10);
+            const umur = 2026 - tahunLahir;
+            return `Lahir: ${tahunLahir} (${umur} thn)`;
+        };
 
         const binaKotak = (ahli, kategory) => {
             let tema = 'theme-neutral'; 
@@ -370,12 +390,10 @@ window.bukaPreview = async () => {
             
             if (ahli.gender === 'L') tema = 'theme-lelaki';
             else if (ahli.gender === 'P') tema = 'theme-perempuan';
-            else if (hub.includes('ayah') || hub.includes('suami') || hub.includes('bapa') || hub.includes('datuk')) tema = 'theme-lelaki';
-            else if (hub.includes('ibu') || hub.includes('isteri') || hub.includes('nenek')) tema = 'theme-perempuan';
-            else if (kategory === 'diri' || hub.includes('anak')) tema = 'theme-neutral';
+            else if (hub.match(/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/)) tema = 'theme-lelaki';
+            else if (hub.match(/ibu|isteri|nenek/)) tema = 'theme-perempuan';
+            else if (kategory === 'diri' || hub.includes('anak') || hub.includes('cucu') || hub.includes('cicit') || hub.includes('piut') || hub.includes('oneng')) tema = 'theme-neutral';
 
-            let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
-            
             let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
             if (ahli.photo_url && ahli.photo_url !== "") {
                 paparanAvatar = `<img src="${ahli.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
@@ -387,28 +405,32 @@ window.bukaPreview = async () => {
                     <div class="mh-avatar">${paparanAvatar}</div>
                     <div class="mh-details">
                         <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
-                        <p class="mh-info">${infoTahun}</p>
+                        <p class="mh-info" style="font-size: 10px;">${kiraUmur(ahli.dob)}</p>
                     </div>
                 </div>
             `;
         };
 
-        const binaTiang = (ahli, senaraiIbubapa = [], kategoryAhli = 'neutral', senaraiDatukNenek = []) => {
+        // Fungsi Membina Tiang Nenek Moyang (Berangkai infiniti ke atas)
+        const binaTiangAtasan = (ahli, ancestorLevels = [], kategoryAhli = 'neutral') => {
             let str = `<div class="pillar">`;
+            let firstLevelIndex = ancestorLevels.findIndex(arr => arr.length > 0);
             
-            if (senaraiIbubapa.length > 0) {
-                // Gunakan class ancestor-couple untuk jarak atas
+            if (firstLevelIndex !== -1) {
+                let levelData = ancestorLevels[firstLevelIndex];
+                let remainingLevels = ancestorLevels.slice(firstLevelIndex + 1);
+
                 let classIbuBapa = "couple-wrapper ancestor-couple has-children";
-                if (senaraiIbubapa.length > 1) classIbuBapa += " has-spouse";
+                if (levelData.length > 1) classIbuBapa += " has-spouse";
                 
                 str += `<div class="${classIbuBapa}">`;
                 
-                // FIX DATUK/NENEK TERBALIK: Tambah 'datuk' dalam syarat match
-                let bapa = senaraiIbubapa.find(ib => ib.relationship.toLowerCase().match(/ayah|bapa|datuk/)) || senaraiIbubapa[0];
-                let ibu = senaraiIbubapa.find(ib => ib !== bapa);
+                // Suami / Lelaki sentiasa di kiri
+                let bapa = levelData.find(ib => ib.gender === 'L' || ib.relationship.toLowerCase().match(/ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/)) || levelData[0];
+                let ibu = levelData.find(ib => ib !== bapa);
                 
-                str += binaTiang(bapa, senaraiDatukNenek, 'ibubapa', []); 
-                if (ibu) str += binaTiang(ibu, [], 'ibubapa', []);
+                str += binaTiangAtasan(bapa, remainingLevels, 'ibubapa'); 
+                if (ibu) str += binaTiangAtasan(ibu, [], 'ibubapa');
                 
                 str += `</div>`;
             }
@@ -418,40 +440,79 @@ window.bukaPreview = async () => {
             return str;
         };
 
+        // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Umur
+        const renderKeturunan = (levels) => {
+            let firstLevelIndex = levels.findIndex(arr => arr.length > 0);
+            if (firstLevelIndex === -1) return '';
+            
+            let levelData = levels[firstLevelIndex];
+            
+            // Susun dari paling tua ke muda (kiri ke kanan)
+            levelData.sort((a, b) => {
+                if (!a.dob) return 1;
+                if (!b.dob) return -1;
+                return new Date(a.dob) - new Date(b.dob);
+            });
+            
+            let remainingLevels = levels.slice(firstLevelIndex + 1);
+            let hasLower = remainingLevels.some(arr => arr.length > 0);
+
+            let str = `<ul>`;
+            levelData.forEach((anak, index) => {
+                // Cantumkan generasi bawah pada anak yang berada di tengah supaya pokok seimbang
+                let showLowerHere = (index === Math.floor(levelData.length / 2)) && hasLower;
+                let classW = "couple-wrapper" + (showLowerHere ? " has-children" : "");
+                
+                str += `<li>`;
+                str += `<div class="${classW}"><div class="pillar">${binaKotak(anak, 'anak')}</div></div>`;
+                if (showLowerHere) str += renderKeturunan(remainingLevels);
+                str += `</li>`;
+            });
+            str += `</ul>`;
+            return str;
+        };
+
         let htmlLayout = '<div class="tree"><ul><li>';
         
-        let adaAnak = anakAnak.length > 0;
+        let senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
+        let adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
         let adaPasangan = pasangan.length > 0;
         
-        // Gunakan class main-couple untuk baris utama
         let classWrapper = "couple-wrapper main-couple";
         if (adaPasangan) classWrapper += " has-spouse";
-        if (adaAnak) classWrapper += " has-children";
+        if (adaKeturunan) classWrapper += " has-children";
         
         htmlLayout += `<div class="${classWrapper}">`;
         
-        // 1. Tiang Diri Sendiri 
-        if (diriSendiri) {
-            htmlLayout += binaTiang(diriSendiri, ibuBapa, 'diri', datukNenek);
-        }
+        // --- SUSUNAN PASANGAN UTAMA (Suami sentiasa KIRI, Isteri KANAN) ---
+        let mainArray = [];
+        if (diriSendiri) mainArray.push(diriSendiri);
+        pasangan.forEach(p => mainArray.push(p));
         
-        // 2. Tiang Pasangan 
-        if (adaPasangan) {
-            pasangan.forEach((p, index) => {
-                let mertuaIsteriIni = (index === 0) ? mertua : [];
-                htmlLayout += binaTiang(p, mertuaIsteriIni, 'pasangan', []);
-            });
-        }
+        mainArray.sort((a, b) => {
+            let aLelaki = a.gender === 'L' || a.relationship.toLowerCase().match(/suami|ayah|bapa/);
+            let bLelaki = b.gender === 'L' || b.relationship.toLowerCase().match(/suami|ayah|bapa/);
+            if (aLelaki && !bLelaki) return -1;
+            if (!aLelaki && bLelaki) return 1;
+            return 0;
+        });
+
+        mainArray.forEach((p, idx) => {
+            if (p.is_root) {
+                // Masukkan semua senarai nenek moyang ke atas
+                htmlLayout += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+            } else {
+                // Isteri (atau pasangan) dapat mertua sahaja (jika dia isteri pertama/pasangan utama)
+                let isteriMertua = (idx === 1) ? [mertua] : []; 
+                htmlLayout += binaTiangAtasan(p, isteriMertua, 'pasangan');
+            }
+        });
         
         htmlLayout += `</div>`;
         
-        // 3. Senarai Anak-anak
-        if (adaAnak) {
-            htmlLayout += `<ul>`;
-            anakAnak.forEach(anak => {
-                htmlLayout += `<li><div class="couple-wrapper">${binaTiang(anak, [], 'anak', [])}</div></li>`;
-            });
-            htmlLayout += `</ul>`;
+        // --- JANA CUCU CICIT PIUT ONENG (Ikut umur) ---
+        if (adaKeturunan) {
+            htmlLayout += renderKeturunan(senaraiKeturunan);
         }
         
         htmlLayout += `</li></ul></div>`;
