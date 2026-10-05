@@ -165,14 +165,15 @@ window.padamAhli = async (idAhli) => {
     }
 };
 
-// --- FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT GAMBAR) ---
+// --- 5. FUNGSI TAMBAH AHLI BARU (DENGAN LOGIK KREDIT YANG DIPERBAIKI) ---
 window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, failGambar) => {
     if (!penggunaSemasa) return;
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
     
     try {
         const snapPengguna = await getDoc(refPengguna);
-        const bakiTerkini = snapPengguna.data().credit_balance;
+        // Pastikan saldo dibaca sebagai angka (integer)
+        const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0; 
         
         let kosKredit = 0;
         
@@ -182,14 +183,18 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             const snapAnak = await getDocs(qAnak);
             if (snapAnak.size >= 5) kosKredit += 1; // Caj 1 kredit untuk anak ke-6
         }
+        else if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") {
+            kosKredit += 5;
+        }
         
-        if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") kosKredit += 5;
+        // JIKA ADA UPLOAD GAMBAR, TAMBAH CAJ 1 KREDIT (Berlaku untuk semua termasuk Datuk/Nenek)
+        if (failGambar) {
+            kosKredit += 1;
+        }
         
-        // JIKA ADA UPLOAD GAMBAR, TAMBAH CAJ 1 KREDIT
-        if (failGambar) kosKredit += 1;
-        
+        // Pengecekan Saldo yang ketat
         if (bakiTerkini < kosKredit) {
-            alert(`Baki kredit tidak mencukupi! Anda perlukan ${kosKredit} kredit (termasuk caj gambar jika ada). Sila tambah nilai.`);
+            alert(`Saldo kredit tidak mencukupi! Anda butuh ${kosKredit} kredit (Termasuk caj 1 kredit jika Anda mengunggah gambar). Sisa saldo Anda: ${bakiTerkini}`);
             return;
         }
         
@@ -202,8 +207,8 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
         // Proses Upload Gambar ke Firebase Storage
         let urlGambar = "";
         if (failGambar) {
-            document.getElementById('modalTambahAhli').classList.add('hidden'); // Sembunyikan modal sementara upload
-            alert("Sedang memuat naik gambar dan menyimpan data. Sila tunggu sebentar...");
+            document.getElementById('modalTambahAhli').classList.add('hidden'); 
+            alert("Sedang mengunggah gambar dan menyimpan data. Harap tunggu sebentar...");
             
             const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
             await uploadBytes(storageRef, failGambar);
@@ -219,18 +224,18 @@ window.tambahAhliBaru = async (nama, hubungan, dob, telefon, bandar, negeri, fai
             phone: telefon,
             city: bandar,
             state: negeri,
-            photo_url: urlGambar, // Masukkan pautan gambar
+            photo_url: urlGambar,
             is_root: false,
             created_at: new Date()
         });
         
-        alert(`${nama} berjaya ditambah!`);
+        alert(`${nama} berhasil ditambahkan!`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
         window.muatTurunSalasilah(); 
         
     } catch (error) {
-        alert("Gagal menambah ahli: " + error.message);
+        alert("Gagal menambah data: " + error.message);
     }
 };
 
@@ -329,12 +334,12 @@ if(formEdit) {
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT ---
+// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (ANTI TUMPANG TINDIH) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
     
     document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok salasilah...</p>';
+    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang menggambar pohon silsilah...</p>';
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -359,7 +364,7 @@ window.bukaPreview = async () => {
             else if (hub.includes("anak")) anakAnak.push(d);
         });
 
-       const binaKotak = (ahli, kategory) => {
+        const binaKotak = (ahli, kategory) => {
             let tema = 'theme-neutral'; 
             let hub = ahli.relationship.toLowerCase();
             
@@ -371,9 +376,7 @@ window.bukaPreview = async () => {
 
             let infoTahun = ahli.dob ? `Lahir: ${ahli.dob.split('-')[0]}` : '';
             
-            // JIKA ADA GAMBAR, TUNJUK GAMBAR. JIKA TIADA, TUNJUK SILUET.
             let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-            
             if (ahli.photo_url && ahli.photo_url !== "") {
                 paparanAvatar = `<img src="${ahli.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
             }
@@ -390,77 +393,84 @@ window.bukaPreview = async () => {
             `;
         };
 
-        let htmlLayout = '<div class="tree"><ul>';
+        // Ruang atas yang lebih besar agar silsilah tidak terpotong
+        let htmlLayout = '<div class="tree" style="padding-top: 140px;"><ul><li>';
 
-        const renderDiriDanAnak = () => {
-            let str = `<li>`;
-            let adaAnak = anakAnak.length > 0;
-            let adaPasangan = pasangan.length > 0;
-            
-            let classWrapper = "couple-wrapper";
-            if (adaPasangan) classWrapper += " has-spouse";
-            if (adaAnak) classWrapper += " has-children";
-            
-            str += `<div class="${classWrapper}">`;
-            if (diriSendiri) str += binaKotak(diriSendiri, 'diri');
-            
-            if (adaPasangan) {
-                str += `<div style="position: relative;">`;
-                
-                // Masukkan Mertua di atas Pasangan
-                if (mertua.length > 0) {
-                    let classMertua = "couple-wrapper has-children";
-                    if (mertua.length > 1) classMertua += " has-spouse";
-                    str += `<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px;">
-                                <div class="${classMertua}">`;
-                    mertua.forEach(m => str += binaKotak(m, 'ibubapa'));
-                    str += `</div></div>`;
-                }
+        let adaAnak = anakAnak.length > 0;
+        let adaPasangan = pasangan.length > 0;
 
-                pasangan.forEach(p => str += binaKotak(p, 'pasangan'));
-                str += `</div>`;
-            }
-            str += `</div>`;
-            
-            if (adaAnak) {
-                str += `<ul>`;
-                anakAnak.forEach(anak => { 
-                    str += `<li><div class="couple-wrapper">${binaKotak(anak, 'anak')}</div></li>`; 
-                });
-                str += `</ul>`;
-            }
-            str += `</li>`;
-            return str;
+        let classWrapper = "couple-wrapper";
+        if (adaPasangan) classWrapper += " has-spouse";
+        if (adaAnak) classWrapper += " has-children";
+
+        // LOGIKA PENJAGAAN JARAK (Mencegah tumpang tindih antara Orang Tua & Mertua)
+        let styleKhas = "";
+        if (ibuBapa.length > 0 && mertua.length > 0) {
+            styleKhas = "gap: 220px;"; // Melebarkan jarak antara Diri & Pasangan agar muat untuk mertua
         }
 
+        htmlLayout += `<div class="${classWrapper}" style="${styleKhas}">`;
+
+        // --- 1. CABANG KIRI (DIRI SENDIRI & ORANG TUA) ---
+        htmlLayout += `<div style="position: relative;">`;
         if (ibuBapa.length > 0) {
-            htmlLayout += `<li>`;
-            
-            // Tambah Datuk & Nenek di atas Ibu Bapa
-            if (datukNenek.length > 0) {
-                let classDatuk = "couple-wrapper has-children";
-                if (datukNenek.length > 1) classDatuk += " has-spouse";
-                htmlLayout += `<div class="${classDatuk}" style="margin-bottom: 25px;">`;
-                datukNenek.forEach(dn => htmlLayout += binaKotak(dn, 'ibubapa'));
-                htmlLayout += `</div>`;
-            }
+             let bapa = ibuBapa.find(ib => ib.relationship.toLowerCase().includes('ayah') || ib.relationship.toLowerCase().includes('bapa')) || ibuBapa[0];
+             let ibu = ibuBapa.find(ib => ib !== bapa);
 
-            let classWrapperIbuBapa = "couple-wrapper has-children";
-            if (ibuBapa.length > 1) classWrapperIbuBapa += " has-spouse";
-            
-            htmlLayout += `<div class="${classWrapperIbuBapa}">`;
-            ibuBapa.forEach(ib => htmlLayout += binaKotak(ib, 'ibubapa'));
-            htmlLayout += `</div>`;
-            
-            htmlLayout += `<ul>`;
-            htmlLayout += renderDiriDanAnak();
-            htmlLayout += `</ul>`;
-            htmlLayout += `</li>`;
-        } else {
-            htmlLayout += renderDiriDanAnak();
+             let classIbuBapa = "couple-wrapper has-children";
+             if (ibu) classIbuBapa += " has-spouse";
+
+             htmlLayout += `<div class="${classIbuBapa}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap; z-index: 10;">`;
+
+             // Cabang Kakek & Nenek di atas Ayah
+             htmlLayout += `<div style="position: relative;">`;
+             if (datukNenek.length > 0) {
+                  let classDatuk = "couple-wrapper has-children";
+                  if (datukNenek.length > 1) classDatuk += " has-spouse";
+                  htmlLayout += `<div class="${classDatuk}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap;">`;
+                  datukNenek.forEach(dn => htmlLayout += binaKotak(dn, 'ibubapa'));
+                  htmlLayout += `</div>`;
+             }
+             htmlLayout += binaKotak(bapa, 'ibubapa');
+             htmlLayout += `</div>`; // Selesai kotak Ayah
+
+             if (ibu) {
+                 htmlLayout += `<div>${binaKotak(ibu, 'ibubapa')}</div>`;
+             }
+             htmlLayout += `</div>`;
+        }
+        if (diriSendiri) htmlLayout += binaKotak(diriSendiri, 'diri');
+        htmlLayout += `</div>`; // Selesai Cabang Kiri
+
+        // --- 2. CABANG KANAN (PASANGAN & MERTUA) ---
+        if (adaPasangan) {
+             pasangan.forEach(p => {
+                 htmlLayout += `<div style="position: relative;">`;
+                 if (mertua.length > 0) {
+                      let classMertua = "couple-wrapper has-children";
+                      if (mertua.length > 1) classMertua += " has-spouse";
+                      
+                      htmlLayout += `<div class="${classMertua}" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 25px; white-space: nowrap; z-index: 10;">`;
+                      mertua.forEach(m => htmlLayout += binaKotak(m, 'ibubapa'));
+                      htmlLayout += `</div>`;
+                 }
+                 htmlLayout += binaKotak(p, 'pasangan');
+                 htmlLayout += `</div>`;
+             });
         }
 
-        htmlLayout += '</ul></div>';
+        htmlLayout += `</div>`; // Selesai Wrapper Pasangan Utama
+
+        // --- 3. ANAK-ANAK DI BAWAH ---
+        if (adaAnak) {
+            htmlLayout += `<ul>`;
+            anakAnak.forEach(anak => {
+                htmlLayout += `<li><div class="couple-wrapper">${binaKotak(anak, 'anak')}</div></li>`;
+            });
+            htmlLayout += `</ul>`;
+        }
+
+        htmlLayout += `</li></ul></div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
 
     } catch (error) {
