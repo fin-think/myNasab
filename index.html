@@ -50,7 +50,7 @@
         .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; }
         .btn-primary { width: 100%; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-/* --- GAYA PREVIEW SALASILAH (ENJIN TIANG / PILLAR V5 - FIX GARISAN ANAK) --- */
+/* --- GAYA PREVIEW SALASILAH (ENJIN TIANG V6 - FINAL FIX GARISAN) --- */
         .modal-preview-box { width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #fdfdfd; }
         .kertas-cetakan { flex: 1; background: #f4efe9; overflow: auto; padding: 40px; border-radius: 8px; margin-top: 15px; border: 1px solid #e5e0d8; }
         
@@ -62,7 +62,7 @@
         /* Garisan Mendatar (Adik-Beradik) */
         .tree li::before, .tree li::after {
             content: ''; position: absolute; top: 0; right: 50%;
-            border-top: 1px solid #a0a0a0; width: 50%; height: 25px; z-index: 0; /* z-index diubah ke 0 */
+            border-top: 1px solid #a0a0a0; width: 50%; height: 25px; z-index: 0; 
         }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #a0a0a0; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
@@ -70,10 +70,10 @@
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
         .tree li:last-child::before { border-right: 1px solid #a0a0a0; border-radius: 0; }
         
-        /* Garisan Menegak ke bawah dari ruang anak */
+        /* Garisan Menegak ke bawah dari ruang anak (Menyambung ke ibubapa) */
         .tree ul ul::before {
             content: ''; position: absolute; top: 0; left: 50%;
-            border-left: 1px solid #a0a0a0; width: 0; height: 25px; z-index: 0; transform: translateX(-50%); /* z-index diubah ke 0 */
+            border-left: 1px solid #a0a0a0; width: 0; height: 25px; z-index: 0; transform: translateX(-50%); 
         }
 
         /* --- BEKAS PASANGAN & TIANG INDIVIDU --- */
@@ -91,17 +91,18 @@
         .couple-wrapper.has-spouse > .pillar::before {
             content: ''; position: absolute;
             bottom: 27px; /* Ngam-ngam tengah kad */
-            width: 50%; border-bottom: 1px solid #a0a0a0; z-index: 0; /* z-index diubah ke 0 */
+            width: 50%; border-bottom: 1px solid #a0a0a0; z-index: 0;
         }
         .couple-wrapper.has-spouse > .pillar:first-child::before { right: 0; }
         .couple-wrapper.has-spouse > .pillar:last-child::before { left: 0; }
         
-        /* Garisan Menegak Turun Ke Anak (FIXED) */
+        /* Garisan Menegak Turun Ke Anak (FIXED KETINGGIAN 52px) */
         .couple-wrapper.has-children { padding-bottom: 25px; }
         .couple-wrapper.has-children::after {
             content: ''; position: absolute;
-            bottom: 0; left: 50%; height: 27px; /* Ketinggian diubah ke 27px dari bawah */
-            border-left: 1px solid #a0a0a0; z-index: 0; /* z-index dinaikkan supaya tak terlindung latar belakang */
+            bottom: 0; left: 50%; 
+            height: 52px; /* 27px (tengah kad) + 25px (padding bawah) = 52px ngam! */
+            border-left: 1px solid #a0a0a0; z-index: 0; 
             transform: translateX(-50%);
         }
 
@@ -111,6 +112,7 @@
             border-radius: 5px; width: 190px; height: 55px;
             box-shadow: 1px 2px 5px rgba(0,0,0,0.1);
             position: relative; z-index: 2; border: 1px solid rgba(0,0,0,0.1);
+            background: #ffffff;
         }
         .mh-avatar {
             width: 45px; background: #e0e0e0; border-radius: 4px 0 0 4px;
