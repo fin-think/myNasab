@@ -78,22 +78,22 @@
 
         /* --- KOTAK BEKAS PASANGAN (Suami & Isteri) --- */
         .couple-wrapper { 
-            display: inline-flex; align-items: center; position: relative; gap: 24px; 
+            display: inline-flex; align-items: center; position: relative; gap: 24px; margin: 0 auto;
         }
         
         /* Garisan Lurus Mendatar Penyambung Suami & Isteri */
         .couple-wrapper.has-spouse::before {
             content: ''; position: absolute;
-            top: 50%; left: 95px; right: 95px; /* Tepat pada saiz separuh kad (190/2) */
-            border-top: 1px solid #a0a0a0; z-index: 0;
+            top: 50%; left: 95px; right: 95px; 
+            border-top: 1px solid #a0a0a0; z-index: -1; 
         }
         
         /* Garisan Menegak turun dari TENGAH Mak & Ayah ke anak-anak! */
-        .couple-wrapper.has-children { padding-bottom: 20px; }
+        .couple-wrapper.has-children { padding-bottom: 25px; }
         .couple-wrapper.has-children::after {
             content: ''; position: absolute;
-            top: 50%; left: 50%; /* Tepat di tengah-tengah ruang kosong Suami & Isteri */
-            border-left: 1px solid #a0a0a0; bottom: 0; z-index: 0;
+            top: 50%; left: 50%; 
+            border-left: 1px solid #a0a0a0; height: 50%; z-index: -1;
         }
 
         /* --- REKAAN KAD MYHERITAGE --- */
@@ -197,13 +197,15 @@
                     <label>Hubungan (dengan anda)</label>
                     <select id="tambahHubungan" required>
                         <option value="">-- Pilih Hubungan --</option>
+                        <option value="Datuk">Datuk (Percuma)</option>
+                        <option value="Nenek">Nenek (Percuma)</option>
                         <option value="Ayah">Ayah (Percuma)</option>
                         <option value="Ibu">Ibu (Percuma)</option>
                         <option value="Suami">Suami (Percuma)</option>
                         <option value="Isteri">Isteri (Percuma)</option>
-                        <option value="Anak">Anak (Tolak 1 Kredit)</option>
-                        <option value="Bapa Mertua">Bapa Mertua (Bina Cabang Baru - Tolak 5 Kredit)</option>
-                        <option value="Ibu Mertua">Ibu Mertua (Bina Cabang Baru - Tolak 5 Kredit)</option>
+                        <option value="Anak">Anak (5 Terawal Percuma, Seterusnya 1 Kredit)</option>
+                        <option value="Bapa Mertua">Bapa Mertua (Tolak 5 Kredit)</option>
+                        <option value="Ibu Mertua">Ibu Mertua (Tolak 5 Kredit)</option>
                     </select>
                 </div>
                 
