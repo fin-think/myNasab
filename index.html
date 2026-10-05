@@ -287,6 +287,11 @@
     </select>
     <small style="color:#7f8c8d;">Ayah/Suami/Bapa Mertua dan Ibu/Isteri/Ibu Mertua auto dipilih. Anak, pilih sendiri.</small>
 </div>
+
+<div class="input-group hidden" id="groupRujukan" style="background:#eef7ff; padding:10px; border-radius:8px; border:1px solid #9ccbf0;">
+    <label>Ibu/bapa kepada siapa?</label>
+    <select id="tambahRujukan"></select>
+</div>
                 
                 <div style="display: flex; gap: 10px;">
                     <div class="input-group" style="flex: 1;">
@@ -522,8 +527,9 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
 
 // Auto-pilih jantina ikut hubungan
 document.getElementById('tambahHubungan').addEventListener('change', function() {
-   const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+    const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
     document.getElementById('tambahJantina').value = peta[this.value] || "";
+    if (window.siapkanRujukan) window.siapkanRujukan(this.value);
 });
         
         // Fungsi Buka & Tutup Borang Tambah Ahli
@@ -560,8 +566,10 @@ document.getElementById('tambahHubungan').addEventListener('change', function() 
                 const inputGambar = document.getElementById('tambahGambar');
                 const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
                 
+                const rujukanId = document.getElementById('tambahRujukan').value;
+                
                 if(window.tambahAhliBaru) {
-                    window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar);
+                window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId);
                 }
             };
         }
