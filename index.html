@@ -314,7 +314,9 @@
                         
                         <optgroup label="Keturunan & Generasi Bawah">
                             <option value="Anak">Anak (5 Terawal Percuma, Ke-6: 1 Kredit)</option>
+                            <option value="Menantu">Menantu (Pasangan Anak) - Tolak 1 Kredit</option>
                             <option value="Cucu">Cucu - Tolak 1 Kredit</option>
+                            <option value="Pasangan Cucu">Pasangan Cucu - Tolak 1 Kredit</option>
                             <option value="Cicit">Cicit - Tolak 1 Kredit</option>
                             <option value="Piut / Cece">Piut / Cece - Tolak 1 Kredit</option>
                             <option value="Oneng-oneng">Oneng-oneng - Tolak 1 Kredit</option>
@@ -623,31 +625,40 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
     }
 });
 
-// Auto-pilih jantina ikut hubungan
-document.getElementById('tambahHubungan').addEventListener('change', function() {
-    const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
-    document.getElementById('tambahJantina').value = peta[this.value] || "";
-    if (window.siapkanRujukan) window.siapkanRujukan(this.value);
-});
+// Auto-pilih jantina & urus dropdown rujukan (Pasangan Anak/Cucu)
+        document.getElementById('tambahHubungan').addEventListener('change', async function() {
+            const val = this.value;
+            const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+            if(peta[val]) document.getElementById('tambahJantina').value = peta[val];
+
+            const groupRujukan = document.getElementById('groupRujukan');
+            const labelRujukan = groupRujukan.querySelector('label');
+            const selectRujukan = document.getElementById('tambahRujukan');
+            
+            // Jika pilih Menantu atau Pasangan Cucu, minta nama anak/cucu dari Firebase
+            if (val === 'Menantu' || val === 'Pasangan Cucu') {
+                groupRujukan.classList.remove('hidden');
+                labelRujukan.innerText = val === 'Menantu' ? "Suami/Isteri kepada Anak yang mana?" : "Pasangan kepada Cucu yang mana?";
+                
+                if(window.muatSenaraiRujukan) {
+                    selectRujukan.innerHTML = '<option>Memuatkan senarai...</option>';
+                    const senarai = await window.muatSenaraiRujukan(val === 'Menantu' ? 'Anak' : 'Cucu');
+                    selectRujukan.innerHTML = '<option value="">-- Sila Pilih --</option>';
+                    senarai.forEach(item => {
+                        selectRujukan.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+                    });
+                }
+            } else {
+                groupRujukan.classList.add('hidden');
+                selectRujukan.innerHTML = '';
+            }
+        });
         
-        // Fungsi Buka & Tutup Borang Tambah Ahli
-        function bukaModalBorang() {
-            document.getElementById('modalTambahAhli').classList.remove('hidden');
-        }
-
-        function tutupModalBorang() {
-            document.getElementById('modalTambahAhli').classList.add('hidden');
-            document.getElementById('formTambahAhli').reset();
-            document.getElementById('groupRujukan').classList.add('hidden');
-        }
-
-      // TANGKAP ISIAN BORANG (TEKNIK ONSUBMIT - CONFIRM JALAN SEKALI SAHAJA)
+        // TANGKAP ISIAN BORANG (DENGAN RUJUKAN)
         const formTambah = document.getElementById('formTambahAhli');
         if (formTambah) {
             formTambah.onsubmit = function(e) {
                 e.preventDefault(); 
-                
-                // Guard kebal: Kalau butang dah disabled, jangan proses lagi!
                 const btnSubmit = formTambah.querySelector('button[type="submit"]');
                 if (btnSubmit && btnSubmit.disabled) return; 
                 
@@ -657,6 +668,13 @@ document.getElementById('tambahHubungan').addEventListener('change', function() 
                 const jantinaElemen = document.getElementById('tambahJantina') || document.querySelector('select[name="jantina"]');
                 const jantina = jantinaElemen ? jantinaElemen.value : 'L'; 
                 
+                const rujukan = document.getElementById('tambahRujukan').value; // Ambil ID pasangan
+                
+                if ((hubungan === 'Menantu' || hubungan === 'Pasangan Cucu') && !rujukan) {
+                    alert("Sila pilih isteri/suami kepada siapa!");
+                    return;
+                }
+
                 const dob = document.getElementById('tambahDob').value;
                 const telefon = document.getElementById('tambahTelefon').value;
                 const bandar = document.getElementById('tambahBandar').value;
@@ -665,10 +683,9 @@ document.getElementById('tambahHubungan').addEventListener('change', function() 
                 const inputGambar = document.getElementById('tambahGambar');
                 const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
                 
-                const rujukanId = document.getElementById('tambahRujukan').value;
-                
                 if(window.tambahAhliBaru) {
-                window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId);
+                    // Hantar param ekstra: rujukan
+                    window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukan);
                 }
             };
         }
