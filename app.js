@@ -83,6 +83,13 @@ window.logMasuk = async (emel, kataLaluan) => {
 
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
     try {
+        
+        if (kodJemput && !jemputan) { 
+            alert("Sila tunggu sebentar, jemputan sedang disemak."); 
+            return; 
+        }
+        const kreditAwal = jemputan ? 5 : 10;
+        
         const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
         const user = kredensial.user;
 
@@ -114,7 +121,7 @@ await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
             });
         }
         
-        alert("Pendaftaran berjaya! Anda menerima 10 Kredit Kotak percuma.");
+        alert(`Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit percuma.`);
         document.getElementById('authModal').style.display = 'none'; 
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
