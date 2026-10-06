@@ -227,6 +227,13 @@
         <option value="P">Perempuan</option>
     </select>
 </div>
+
+<div class="input-group hidden" id="groupPDPA">
+    <label style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:#576574; line-height:1.4;">
+        <input type="checkbox" id="inputPDPA" style="width:auto; padding:0; margin-top:3px;">
+        <span>Saya bersetuju nama, tarikh lahir, telefon dan maklumat salasilah saya disimpan dan dipaparkan kepada ahli keluarga yang dipautkan, selaras dengan Akta Perlindungan Data Peribadi 2010. <a href="privasi.html" target="_blank">Dasar Privasi</a></span>
+    </label>
+</div>
                 
                 <button type="submit" class="btn-primary" id="btnSubmit">Log Masuk</button>
                 <p style="text-align: center; margin-top: 15px; font-size: 14px;">
@@ -536,6 +543,7 @@
     document.getElementById('modalTitle').innerText = modPendaftaran ? "Daftar Akaun" : "Log Masuk";
     document.getElementById('btnSubmit').innerText = modPendaftaran ? "Daftar Sekarang" : "Log Masuk";
     document.getElementById('toggleText').innerText = modPendaftaran ? "Sudah ada akaun?" : "Belum ada akaun?";
+    document.getElementById('groupPDPA').classList.toggle('hidden', !modPendaftaran);
 }
 
 const kodJemput = new URLSearchParams(location.search).get('jemput');
@@ -553,6 +561,7 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
         const nama = document.getElementById('inputNama').value;
         const jantina = document.getElementById('inputJantina').value;
         if (!jantina) { alert("Sila pilih jantina anda."); return; }
+        if (!document.getElementById('inputPDPA').checked) { alert("Sila setuju dengan syarat PDPA untuk mendaftar."); return; }
         if (window.daftarPengguna) window.daftarPengguna(emel, laluan, nama, jantina);
     } else {
         if (window.logMasuk) window.logMasuk(emel, laluan);
