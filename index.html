@@ -190,6 +190,20 @@
 .btn-sembunyi:hover { color: #e74c3c; border-color: #e74c3c; }
 .bar-sembunyi { margin-top: 30px; font-size: 13px; color: #576574; text-align: center; }
 .bar-sembunyi button { margin: 0 8px 0 4px; padding: 3px 10px; border: 1px solid #0ea5e9; background: #fff; color: #0ea5e9; border-radius: 12px; cursor: pointer; }
+
+/* Bar kawalan: bungkus bila skrin sempit */
+#kawalanPreview { flex-wrap: wrap; gap: 10px; }
+#kawalanPreview > div { flex-wrap: wrap; justify-content: flex-end; }
+
+/* Pokok lebar: boleh di-scroll ke kiri, tetap di tengah bila muat */
+#ruangAutoLayout { align-items: flex-start !important; }
+#ruangAutoLayout > .tree { margin: 0 auto; }
+
+.kotak-zoom { background:#f1f2f6; padding:5px 10px; border-radius:6px; display:flex; align-items:center; gap:6px; }
+.kotak-zoom button { width:30px; height:30px; border:none; border-radius:5px; background:#fff; color:#2c3e50; font-size:18px; font-weight:bold; line-height:1; cursor:pointer; }
+.kotak-zoom button.muat { width:auto; padding:0 10px; font-size:13px; }
+.kotak-zoom button:hover { background:#e3eefa; }
+.kotak-zoom span { min-width:44px; text-align:center; font-size:13px; font-weight:bold; color:#576574; }
        
         @media print {
             body * { visibility: hidden; }
@@ -466,6 +480,13 @@
         <option value="besar_pasangan">Keluarga Besar: Belah Pasangan</option>
         <option value="besar_semua">Keluarga Besar: Semua</option>
     </select>
+</div>
+
+<div class="kotak-zoom">
+    <button type="button" title="Kecilkan" onclick="window.zoomKeluar()">−</button>
+    <span id="labelZoom">100%</span>
+    <button type="button" title="Besarkan" onclick="window.zoomMasuk()">+</button>
+    <button type="button" class="muat" title="Muat ikut skrin" onclick="window.autoMuat(true)">Muat</button>
 </div>
                     
                     <div style="background: #f1f2f6; padding: 5px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
