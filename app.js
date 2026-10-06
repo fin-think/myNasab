@@ -118,11 +118,15 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
                 owner_uid: jem.owner_uid,
                 sasaran_id: jem.sasaran_id,
                 kod: kodJemput,
+                status: 'menunggu',
+                nama: namaKeluarga,
                 created_at: new Date()
             });
         }
 
-        alert(`Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit percuma.`);
+                alert(jem
+            ? `Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit. Pautan keluarga anda menunggu kelulusan ${jem.nama_pengundang}.`
+            : `Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit percuma.`);
         location.href = location.pathname; // buang ?jemput= dan muat semula dashboard
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
@@ -696,6 +700,20 @@ window.salinPautan = () => {
     alert("Pautan disalin!");
 };
 
+window.muatMenunggu = async () => {
+    const el = document.getElementById('senaraiMenunggu');
+    const s = await getDocs(query(collection(db, "mynasab_links"),
+        where("owner_uid", "==", penggunaSemasa.uid), where("status", "==", "menunggu")));
+    el.innerHTML = s.empty ? '' :
+        '<p style="font-weight:bold; color:#d35400; margin:0 0 6px;">Menunggu kelulusan:</p>' +
+        s.docs.map(d => `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+            <span>${esc(d.data().nama)}</span>
+            <span><button type="button" onclick="window.luluskanPautan('${d.id}')" style="background:#27ae60; color:#fff; border:none; border-radius:5px; padding:4px 10px; cursor:pointer;">Terima</button>
+            <button type="button" onclick="window.tolakPautan('${d.id}')" style="background:#e74c3c; color:#fff; border:none; border-radius:5px; padding:4px 10px; cursor:pointer;">Tolak</button></span></div>`).join('');
+};
+window.luluskanPautan = async (uid) => { await updateDoc(doc(db, "mynasab_links", uid), { status: 'aktif' }); window.muatMenunggu(); };
+window.tolakPautan = async (uid) => { await deleteDoc(doc(db, "mynasab_links", uid)); window.muatMenunggu(); };
+
 // --- 11. POKOK BESAR (KELUARGA DIPAUTKAN) ---
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -725,11 +743,16 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
     try {
         // 1. Induk = akaun yang menjemput (kalau saya bukan adik, induk = saya)
         const sLinkSaya = await getDoc(doc(db, "mynasab_links", saya));
+        if (sLinkSaya.exists() && sLinkSaya.data().status !== 'aktif') {
+            ruang.innerHTML = '<p>Pautan keluarga anda masih menunggu kelulusan pengundang.</p>';
+            return;
+        }
         const indukUid = sLinkSaya.exists() ? sLinkSaya.data().owner_uid : saya;
         const sayaInduk = indukUid === saya;
 
         // 2. Akaun yang dipautkan kepada induk + senarai sembunyi saya
-        const sPautan = await getDocs(query(collection(db, "mynasab_links"), where("owner_uid", "==", indukUid)));
+        const sPautan = await getDocs(query(collection(db, "mynasab_links"),
+            where("owner_uid", "==", indukUid), where("status", "==", "aktif")));
         const pautan = sPautan.docs.map(d => d.data());
         const sUser = await getDoc(doc(db, "mynasab_users", saya));
         const sembunyi = (sUser.exists() && sUser.data().sembunyi) || [];
