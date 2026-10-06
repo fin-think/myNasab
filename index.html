@@ -173,6 +173,24 @@
         .theme-perempuan { background-color: #f8c8d4; border-color: #d19ba9; }
         .theme-neutral { background-color: #c9e4ca; border-color: #a4c4a6; }
 
+/* --- POKOK BESAR --- */
+.pokok-besar { gap: 80px; align-items: flex-start; }
+.sisi-pokok { display: flex; flex-direction: column; align-items: center; }
+.judul-belah { margin: 0 0 10px; color: #2c3e50; font-size: 18px; }
+
+/* Ibu bapa atas: leluhur tak lebarkan tiang (sama prinsip dengan paparan lama) */
+.induk-atas > .pillar > .ancestor-couple { width: 0; min-width: 0; overflow: visible; }
+.induk-atas:has(> .pillar > .ancestor-couple) > .pillar:first-child { padding-left: 125px; }
+.induk-atas:has(> .pillar > .ancestor-couple) > .pillar:last-child  { padding-right: 125px; }
+.induk-atas.anc-both > .pillar:first-child { padding-right: 125px; }
+.induk-atas.anc-both > .pillar:last-child  { padding-left: 125px; }
+
+.btn-sembunyi { position: absolute; top: -9px; left: -7px; width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid #ccc; background: #fff; color: #888; font-size: 11px; line-height: 1; padding: 0; cursor: pointer; z-index: 3; }
+.btn-sembunyi:hover { color: #e74c3c; border-color: #e74c3c; }
+.bar-sembunyi { margin-top: 30px; font-size: 13px; color: #576574; text-align: center; }
+.bar-sembunyi button { margin: 0 8px 0 4px; padding: 3px 10px; border: 1px solid #0ea5e9; background: #fff; color: #0ea5e9; border-radius: 12px; cursor: pointer; }
+       
         @media print {
             body * { visibility: hidden; }
             #modalPreview, #modalPreview * { visibility: visible; }
@@ -184,6 +202,7 @@
             .mh-card, .mh-avatar, .badge-mini {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            .btn-sembunyi, .bar-sembunyi { display: none !important; 
             }
         }
         
@@ -434,6 +453,16 @@
             <div id="kawalanPreview" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;">
                 <h2 style="margin: 0; color: #2c3e50;">Paparan Pokok Salasilah</h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
+
+<div style="background:#f1f2f6; padding:5px 15px; border-radius:6px; display:flex; align-items:center; gap:10px;">
+    <label style="font-size:14px; font-weight:bold; color:#576574;">Paparan:</label>
+    <select id="pilihanPaparan" onchange="window.tukarPaparan()" style="border:none; background:white; padding:5px; border-radius:4px;">
+        <option value="saya">Keluarga Saya</option>
+        <option value="besar_saya">Keluarga Besar: Belah Saya</option>
+        <option value="besar_pasangan">Keluarga Besar: Belah Pasangan</option>
+        <option value="besar_semua">Keluarga Besar: Semua</option>
+    </select>
+</div>
                     
                     <div style="background: #f1f2f6; padding: 5px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
                         <label style="font-size: 14px; font-weight: bold; color: #576574;">Saiz Kertas:</label>
