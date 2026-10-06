@@ -268,12 +268,7 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             return; 
         }
         
-        // POTONG KREDIT TERUS TANPA NOTIFIKASI (Senyap)
-        if (jumlahKos > 0) {
-            await updateDoc(refPengguna, { credit_balance: increment(-jumlahKos) });
-            document.getElementById('creditBalance').innerText = bakiTerkini - jumlahKos;
-        }
-
+       
         // UPLOAD GAMBAR SECARA SENYAP (Tiada lagi alert "Sedang memuat naik...")
         let urlGambar = "";
         if (failGambar && failGambar.size > 0) {
@@ -297,6 +292,12 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             is_root: false,
             created_at: new Date()
         });
+
+ // POTONG KREDIT TERUS TANPA NOTIFIKASI (Senyap)
+        if (jumlahKos > 0) {
+            await updateDoc(refPengguna, { credit_balance: increment(-jumlahKos) });
+            document.getElementById('creditBalance').innerText = bakiTerkini - jumlahKos;
+        }
         
         // Hanya satu notifikasi dihujung untuk beritahu proses selesai
         alert(`Berjaya! ${nama} direkodkan.`);
@@ -772,6 +773,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             nod.forEach(d => {
                 const h = (d.relationship || '').toLowerCase();
                 if (d.is_root) k.diri = d;
+                if (!n.is_root && n.owner_uid !== saya && /suami|isteri/i.test(h)) return 'Ipar';
                 else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
                 else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
                 else if (h.includes('mertua')) k.mertua.push(d);
