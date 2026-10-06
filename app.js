@@ -421,6 +421,7 @@ window.bukaPreview = async () => {
     
     document.getElementById('modalPreview').classList.remove('hidden');
     document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok keturunan...</p>';
+    window.autoMuat();
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -645,7 +646,7 @@ window.cetakSalasilah = () => {
         ruang.style.zoom = skala;
     }
 
-    window.addEventListener('afterprint', () => { ruang.style.zoom = 1; }, { once: true });
+    window.addEventListener('afterprint', () => { ruang.style.zoom = zoomSemasa; }, { once: true });
     setTimeout(() => window.print(), 100); // bagi masa browser susun semula
 };
 
@@ -721,7 +722,8 @@ window.tolakPautan = async (uid) => { await deleteDoc(doc(db, "mynasab_links", u
 // --- 11. POKOK BESAR (KELUARGA DIPAUTKAN) ---
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-window.tukarPaparan = () => {
+window.tukarPaparan = (kekal = false) => {
+    kekalZoom = (kekal === true);   // sembunyi/papar: kekalkan zoom pengguna
     const v = document.getElementById('pilihanPaparan').value;
     if (v === 'saya') return window.bukaPreview();
     window.bukaPreviewBesar(v.replace('besar_', ''));
@@ -729,11 +731,11 @@ window.tukarPaparan = () => {
 
 window.sembunyiAkaun = async (uid) => {
     await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), { sembunyi: arrayUnion(uid) });
-    window.tukarPaparan();
+    window.tukarPaparan(true);
 };
 window.paparAkaun = async (uid) => {
     await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), { sembunyi: arrayRemove(uid) });
-    window.tukarPaparan();
+    window.tukarPaparan(true);
 };
 
 window.bukaPreviewBesar = async (mod = 'semua') => {
@@ -742,6 +744,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
     const ruang = document.getElementById('ruangAutoLayout');
     document.getElementById('modalPreview').classList.remove('hidden');
     ruang.innerHTML = '<p>Sedang melukis pokok keluarga besar...</p>';
+    window.autoMuat();
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -953,3 +956,38 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         ruang.innerHTML = `<p style="color:red;">Gagal menjana pokok besar: ${esc(error.message)}</p>`;
     }
 };
+
+// --- 12. ZOOM POKOK ---
+let zoomSemasa = 1;
+let kekalZoom = false;
+const ZOOM_MIN = 0.15, ZOOM_MAX = 2.5;
+
+const terapZoom = (z) => {
+    zoomSemasa = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    document.getElementById('ruangAutoLayout').style.zoom = zoomSemasa;
+    document.getElementById('labelZoom').innerText = Math.round(zoomSemasa * 100) + '%';
+};
+
+window.zoomMasuk = () => terapZoom(zoomSemasa * 1.2);
+window.zoomKeluar = () => terapZoom(zoomSemasa / 1.2);
+
+// Muat lebar skrin (tak pernah membesarkan melebihi 100%)
+window.autoMuat = (paksa = false) => {
+    if (kekalZoom && paksa !== true) { kekalZoom = false; terapZoom(zoomSemasa); return; }
+    kekalZoom = false;
+    const ruang = document.getElementById('ruangAutoLayout');
+    const pokok = ruang.querySelector('.tree');
+    if (!pokok) return;
+    ruang.style.zoom = 1; // ukur pada saiz sebenar
+    const lebarSedia = document.getElementById('kertasCetak').clientWidth - 80; // tolak padding 40px kiri+kanan
+    terapZoom(Math.min(1, lebarSedia / pokok.scrollWidth));
+};
+
+// Ctrl + roda tetikus = zoom
+document.addEventListener('wheel', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const kertas = document.getElementById('kertasCetak');
+    if (!kertas || !kertas.contains(e.target)) return;
+    e.preventDefault();
+    terapZoom(zoomSemasa * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+}, { passive: false });
