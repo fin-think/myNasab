@@ -652,9 +652,9 @@
     
     <!-- Skrip UI Mudah -->
     <script>
-        let modPendaftaran = false;
+let modPendaftaran = false;
 
-       function tukarModAuth() {
+function tukarModAuth() {
     modPendaftaran = !modPendaftaran;
     document.getElementById('groupNama').classList.toggle('hidden', !modPendaftaran);
     document.getElementById('groupJantinaDaftar').classList.toggle('hidden', !modPendaftaran);
@@ -668,10 +668,10 @@ const kodJemput = new URLSearchParams(location.search).get('jemput');
 if (kodJemput) {
     document.getElementById('welcomeScreen').style.display = 'none';
     document.getElementById('authModal').classList.remove('hidden');
-    tukarModAuth(); // terus ke mod Daftar
+    tukarModAuth();
 }
-        
-document.getElementById('authForm').addEventListener('submit', function(e) {
+
+document.getElementById('authForm').addEventListener('submit', function (e) {
     e.preventDefault();
     const emel = document.getElementById('inputEmel').value;
     const laluan = document.getElementById('inputKatalaluan').value;
@@ -686,92 +686,65 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
     }
 });
 
-// Auto-pilih jantina & urus dropdown rujukan (Pasangan Anak/Cucu)
-        document.getElementById('tambahHubungan').addEventListener('change', function () {
+// Auto-pilih jantina & dropdown "ibu/bapa kepada siapa"
+document.getElementById('tambahHubungan').addEventListener('change', function () {
     const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
     if (peta[this.value]) document.getElementById('tambahJantina').value = peta[this.value];
     if (window.siapkanRujukan) window.siapkanRujukan(this.value);
 });
 
-// Status Hidup / Meninggal dunia: sembunyi tarikh lahir bila meninggal
-window.tukarStatus = (awalan) => {
-    const radio = document.querySelector(`input[name="${awalan}Status"]:checked`);
+// Status Hidup / Meninggal dunia
+window.tukarStatus = function (awalan) {
+    const radio = document.querySelector('input[name="' + awalan + 'Status"]:checked');
     const mati = radio && radio.value === 'meninggal';
     document.getElementById(awalan + 'DobGroup').classList.toggle('hidden', !!mati);
 };
-document.getElementById('formTambahAhli').addEventListener('reset', () => setTimeout(() => window.tukarStatus('tambah'), 0));
-        
-            const groupRujukan = document.getElementById('groupRujukan');
-            const labelRujukan = groupRujukan.querySelector('label');
-            const selectRujukan = document.getElementById('tambahRujukan');
-            
-            // Jika pilih Menantu atau Pasangan Cucu, minta nama anak/cucu dari Firebase
-            if (val === 'Menantu' || val === 'Pasangan Cucu') {
-                groupRujukan.classList.remove('hidden');
-                labelRujukan.innerText = val === 'Menantu' ? "Suami/Isteri kepada Anak yang mana?" : "Pasangan kepada Cucu yang mana?";
-                
-                if(window.muatSenaraiRujukan) {
-                    selectRujukan.innerHTML = '<option>Memuatkan senarai...</option>';
-                    const senarai = await window.muatSenaraiRujukan(val === 'Menantu' ? 'Anak' : 'Cucu');
-                    selectRujukan.innerHTML = '<option value="">-- Sila Pilih --</option>';
-                    senarai.forEach(item => {
-                        selectRujukan.innerHTML += `<option value="${item.id}">${item.name}</option>`;
-                    });
-                }
-            } else {
-                groupRujukan.classList.add('hidden');
-                selectRujukan.innerHTML = '';
-            }
-        });
+document.getElementById('formTambahAhli').addEventListener('reset', function () {
+    setTimeout(function () { window.tukarStatus('tambah'); }, 0);
+});
 
-// --- GANTIKAN DI SINI: Fungsi Buka & Tutup Borang Tambah Ahli (VERSI KEBAL) ---
-        window.bukaModalBorang = function() {
-            document.getElementById('modalTambahAhli').classList.remove('hidden');
-        };
+// Buka & tutup borang Tambah Ahli
+window.bukaModalBorang = function () {
+    document.getElementById('modalTambahAhli').classList.remove('hidden');
+};
+window.tutupModalBorang = function () {
+    document.getElementById('modalTambahAhli').classList.add('hidden');
+    document.getElementById('formTambahAhli').reset();
+    document.getElementById('groupRujukan').classList.add('hidden');
+};
 
-        window.tutupModalBorang = function() {
-            document.getElementById('modalTambahAhli').classList.add('hidden');
-            document.getElementById('formTambahAhli').reset();
-            document.getElementById('groupRujukan').classList.add('hidden');
-        };
-        
-        // TANGKAP ISIAN BORANG (DENGAN RUJUKAN)
-        const formTambah = document.getElementById('formTambahAhli');
-        if (formTambah) {
-            formTambah.onsubmit = function(e) {
-                e.preventDefault(); 
-                const btnSubmit = formTambah.querySelector('button[type="submit"]');
-                if (btnSubmit && btnSubmit.disabled) return; 
-                
-                const nama = document.getElementById('tambahNama').value;
-                const hubungan = document.getElementById('tambahHubungan').value;
-                
-                const jantinaElemen = document.getElementById('tambahJantina') || document.querySelector('select[name="jantina"]');
-                const jantina = jantinaElemen ? jantinaElemen.value : 'L'; 
-                
-                const rujukan = document.getElementById('tambahRujukan').value; // Ambil ID pasangan
-               
-                if ((hubungan === 'Menantu' || hubungan === 'Pasangan Cucu') && !rujukan) {
-                    alert("Sila pilih isteri/suami kepada siapa!");
-                    return;
-                }
+// Hantar borang Tambah Ahli
+const formTambah = document.getElementById('formTambahAhli');
+formTambah.onsubmit = function (e) {
+    e.preventDefault();
+    const btnSubmit = formTambah.querySelector('button[type="submit"]');
+    if (btnSubmit && btnSubmit.disabled) return;
 
-                const dob = document.getElementById('tambahDob').value;
-                const telefon = document.getElementById('tambahTelefon').value;
-                const bandar = document.getElementById('tambahBandar').value;
-                const negeri = document.getElementById('tambahNegeri').value;
-                
-                const inputGambar = document.getElementById('tambahGambar');
-                const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
+    const nama = document.getElementById('tambahNama').value;
+    const hubungan = document.getElementById('tambahHubungan').value;
+    const jantina = document.getElementById('tambahJantina').value;
+    const rujukan = document.getElementById('tambahRujukan').value;
 
-                               
-                if(window.tambahAhliBaru) {
-                const status = document.querySelector('input[name="tambahStatus"]:checked').value;
-                window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukan, status);
-                }
-            };
-        }
-        
-    </script>
+    if ((hubungan === 'Menantu' || hubungan === 'Pasangan Cucu') && !rujukan) {
+        alert("Sila pilih isteri/suami kepada siapa!");
+        return;
+    }
+
+    const dob = document.getElementById('tambahDob').value;
+    const telefon = document.getElementById('tambahTelefon').value;
+    const bandar = document.getElementById('tambahBandar').value;
+    const negeri = document.getElementById('tambahNegeri').value;
+
+    const inputGambar = document.getElementById('tambahGambar');
+    const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
+
+    const radioStatus = document.querySelector('input[name="tambahStatus"]:checked');
+    const status = radioStatus ? radioStatus.value : 'hidup';
+
+    if (window.tambahAhliBaru) {
+        window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukan, status);
+    }
+};
+</script>
 </body>
 </html>
