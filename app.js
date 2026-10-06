@@ -1,11 +1,10 @@
 // ==========================================
-// app.js - Logik Teras FamiliPintar (VERSI 4 - DASHBOARD)
+// app.js - Logik Teras FamiliPintar (VERSI 5 - DIBETULKAN)
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-// TAMBAH MODULE STORAGE INI
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 const firebaseConfig = {
@@ -22,9 +21,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app); // INISIALISASI STORAGE
+const storage = getStorage(app);
 let penggunaSemasa = null;
 
+// --- BANTU: escape teks (elak skrip berniat jahat) ---
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// --- BANTU: teks "Lahir" / "Meninggal dunia" pada kad ---
 const infoLahir = (a) => {
     if (a.status === 'meninggal') return 'Meninggal dunia';
     if (!a.dob) return '';
@@ -49,18 +52,16 @@ if (kodJemput) {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
-        
-        // Sembunyikan skrin depan & borang login
+
         const welcomeElement = document.getElementById('welcomeScreen');
-        if (welcomeElement) welcomeElement.style.display = 'none'; 
-        
+        if (welcomeElement) welcomeElement.style.display = 'none';
+
         const authModalElement = document.getElementById('authModal');
         if (authModalElement) authModalElement.style.display = 'none';
-        
-        // Munculkan Dashboard
+
         const dashboardUtama = document.getElementById('dashboardUtama');
         if (dashboardUtama) dashboardUtama.classList.remove('hidden');
-        
+
         const refPengguna = doc(db, "mynasab_users", user.uid);
         const snapPengguna = await getDoc(refPengguna);
 
@@ -68,7 +69,8 @@ onAuthStateChanged(auth, async (user) => {
             const dataPengguna = snapPengguna.data();
             document.getElementById('creditBalance').innerText = dataPengguna.credit_balance;
             document.getElementById('treeNameDisplay').innerText = dataPengguna.name;
-            window.muatTurunSalasilah(); // Load data masuk ke jadual
+            window.muatTurunSalasilah();
+            window.muatMenunggu();   // kad "Menunggu Kelulusan" untuk akaun induk
         }
     } else {
         penggunaSemasa = null;
@@ -89,7 +91,6 @@ window.logMasuk = async (emel, kataLaluan) => {
 };
 
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
-    // Semak jemputan SEBELUM cipta akaun
     if (kodJemput && !jemputan) {
         alert("Pautan jemputan tidak sah atau belum siap dimuatkan. Cuba lagi sebentar.");
         return;
@@ -131,10 +132,10 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
             });
         }
 
-                alert(jem
+        alert(jem
             ? `Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit. Pautan keluarga anda menunggu kelulusan ${jem.nama_pengundang}.`
             : `Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit percuma.`);
-        location.href = location.pathname; // buang ?jemput= dan muat semula dashboard
+        location.href = location.pathname;
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
     }
@@ -144,17 +145,17 @@ window.logKeluar = async () => {
     try { await signOut(auth); location.reload(); } catch (error) {}
 };
 
-// --- 3. FUNGSI MUAT TURUN DATA KE JADUAL DASHBOARD ---
+// --- 3. MUAT TURUN DATA KE JADUAL DASHBOARD ---
 window.muatTurunSalasilah = async () => {
     if (!penggunaSemasa) return;
     try {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
         const tbody = document.getElementById('senaraiAhliTbody');
-        
-        tbody.innerHTML = ''; 
-        
-        // AUTO-PEMULIHAN: Jika jadual kosong, bina 'Diri Sendiri' secara automatik
+
+        tbody.innerHTML = '';
+
+        // AUTO-PEMULIHAN: jika kosong, bina 'Diri Sendiri'
         if (querySnapshot.empty) {
             const namaPenuh = document.getElementById('treeNameDisplay').innerText || "Ketua Keluarga";
             await setDoc(doc(db, "mynasab_nodes", "root_" + penggunaSemasa.uid), {
@@ -164,52 +165,48 @@ window.muatTurunSalasilah = async () => {
                 is_root: true,
                 created_at: new Date()
             });
-            
-            // Panggil fungsi ini semula untuk paparkan data yang baru dibina
             window.muatTurunSalasilah();
-            window.muatMenunggu();   // ← tambah
             return;
         }
-        
+
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const idKotak = docSnap.id;
-            
-            let nama = data.name || "Tiada Nama";
-            let hubungan = data.relationship || "Belum Ditetapkan";
-            
+
+            const nama = data.name || "Tiada Nama";
+            const hubungan = data.relationship || "Belum Ditetapkan";
+
             const tr = document.createElement('tr');
-            
-            // Susun butang tindakan
+
             let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
-            if (!data.is_root) { // Halang Diri Sendiri dari dipadam
+            if (!data.is_root) {
                 butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
 
             tr.innerHTML = `
-                <td><strong>${nama}</strong></td>
-                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${hubungan}</span></td>
+                <td><strong>${esc(nama)}</strong></td>
+                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${esc(hubungan)}</span></td>
                 <td>${butangTindakan}</td>
             `;
             tbody.appendChild(tr);
         });
-        
+
     } catch (error) { console.error("Gagal memuat turun senarai:", error); }
 };
 
-// --- 4. FUNGSI PADAM AHLI (FUNGSI BARU) ---
+// --- 4. PADAM AHLI ---
 window.padamAhli = async (idAhli) => {
-    if(confirm("Anda pasti mahu memadam rekod ahli ini?")) {
+    if (confirm("Anda pasti mahu memadam rekod ahli ini?")) {
         try {
             await deleteDoc(doc(db, "mynasab_nodes", idAhli));
-            window.muatTurunSalasilah(); // Refresh jadual selepas padam
+            window.muatTurunSalasilah();
         } catch (e) {
             alert("Gagal memadam ahli: " + e.message);
         }
     }
 };
 
-// --- 5. FUNGSI TAMBAH AHLI BARU (PANTAS & TANPA NOTIFIKASI MENYEMAK) ---
+// --- 5. TAMBAH AHLI BARU ---
 window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId, status = 'hidup') => {
     if (!penggunaSemasa) return;
 
@@ -218,27 +215,25 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
         alert("Ibu bapa dan leluhur diambil daripada pokok pengundang, jadi tidak perlu ditambah di sini.");
         return;
     }
-    
+
     const btnSubmit = document.querySelector('#formTambahAhli button[type="submit"]');
     let teksAsalButang = "Simpan Ahli";
-    
-    // Kunci butang dan tukar teks secara senyap (tanpa popup alert)
-    if(btnSubmit) {
+
+    if (btnSubmit) {
         teksAsalButang = btnSubmit.innerText;
         btnSubmit.disabled = true;
-        btnSubmit.innerText = "Menyimpan..."; 
+        btnSubmit.innerText = "Menyimpan...";
     }
 
     const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
-    
+
     try {
         const snapPengguna = await getDoc(refPengguna);
-        const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0; 
-       
+        const bakiTerkini = parseInt(snapPengguna.data().credit_balance, 10) || 0;
+
         let kosAhli = 0;
-        let hubLower = hubungan.toLowerCase();
-        
-        // Pengiraan Caj Ahli
+        const hubLower = hubungan.toLowerCase();
+
         if (hubungan === "Anak") {
             const qAnak = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("relationship", "==", "Anak"));
             const snapAnak = await getDocs(qAnak);
@@ -247,93 +242,82 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
         else if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") {
             kosAhli = 5;
         }
-        else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng")) {
-            kosAhli = 1; 
+        else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng") || hubLower.includes("menantu")) {
+            kosAhli = 1;
         }
 
         if (RUJUKAN[hubungan] && !rujukanId) {
-            alert("Sila pilih ibu/bapa kepada siapa. Jika senarai kosong, tambah orang tu dahulu.");
+            alert("Sila pilih ibu/bapa (atau pasangan) kepada siapa. Jika senarai kosong, tambah orang tu dahulu.");
             return;
         }
-        
-       if (rujukanId) {
+
+        // Had 2 ibu bapa — TIDAK terpakai untuk Menantu / Pasangan Cucu
+        const adalahPasanganKeturunan = (hubungan === "Menantu" || hubungan === "Pasangan Cucu");
+        if (rujukanId && !adalahPasanganKeturunan) {
             const qSama = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("ref_id", "==", rujukanId));
             const snapSama = await getDocs(qSama);
             if (snapSama.size >= 2) { alert("Orang ini sudah ada 2 ibu bapa dalam salasilah."); return; }
         }
-        
-        // Pengiraan Caj Gambar (Hanya jika gambar wujud dan bersaiz lebih 0)
-        let kosGambar = (failGambar && failGambar.size > 0) ? 1 : 0;
-        let jumlahKos = kosAhli + kosGambar;
-        
-        // ALERT HANYA KELUAR JIKA KREDIT TIDAK CUKUP
+
+        const kosGambar = (failGambar && failGambar.size > 0) ? 1 : 0;
+        const jumlahKos = kosAhli + kosGambar;
+
         if (jumlahKos > 0 && bakiTerkini < jumlahKos) {
             alert(`Baki kredit tidak mencukupi!\n\nSistem perlukan: ${jumlahKos} Kredit\n(Caj Ahli: ${kosAhli} + Caj Gambar: ${kosGambar})\n\nBaki semasa anda: ${bakiTerkini} Kredit.`);
-            if(btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerText = teksAsalButang;
-            }
-            return; 
+            return;
         }
-        
-       
-        // UPLOAD GAMBAR SECARA SENYAP (Tiada lagi alert "Sedang memuat naik...")
+
         let urlGambar = "";
         if (failGambar && failGambar.size > 0) {
             const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambar.name}`);
             await uploadBytes(storageRef, failGambar);
             urlGambar = await getDownloadURL(storageRef);
         }
-        
-        // SIMPAN DATA KE DATABASE
+
         await addDoc(collection(db, "mynasab_nodes"), {
             owner_uid: penggunaSemasa.uid,
             name: nama,
             relationship: hubungan,
             gender: jantina,
             ref_id: rujukanId || "",
-            dob: dob,
+            dob: status === 'meninggal' ? '' : dob,
+            status: status,
             phone: telefon,
             city: bandar,
             state: negeri,
             photo_url: urlGambar,
             is_root: false,
-            dob: status === 'meninggal' ? '' : dob,
-            status: status,
             created_at: new Date()
         });
 
- // POTONG KREDIT TERUS TANPA NOTIFIKASI (Senyap)
         if (jumlahKos > 0) {
             await updateDoc(refPengguna, { credit_balance: increment(-jumlahKos) });
             document.getElementById('creditBalance').innerText = bakiTerkini - jumlahKos;
         }
-        
-        // Hanya satu notifikasi dihujung untuk beritahu proses selesai
+
         alert(`Berjaya! ${nama} direkodkan.`);
         document.getElementById('modalTambahAhli').classList.add('hidden');
         document.getElementById('formTambahAhli').reset();
         document.getElementById('groupRujukan').classList.add('hidden');
-        window.muatTurunSalasilah(); 
-        
+        window.muatTurunSalasilah();
+
     } catch (error) {
         alert("Gagal menambah data: " + error.message);
     } finally {
-        // Kembalikan butang kepada asal
-        if(btnSubmit) {
+        if (btnSubmit) {
             btnSubmit.disabled = false;
             btnSubmit.innerText = teksAsalButang;
         }
     }
 };
 
-// --- 6. FUNGSI KEMASKINI PROFIL AHLI (EDIT) ---
+// --- 6. KEMASKINI PROFIL AHLI (EDIT) ---
 window.bukaModalEdit = async (idKotak) => {
     try {
         const docSnap = await getDoc(doc(db, "mynasab_nodes", idKotak));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            
+
             document.getElementById('editAhliId').value = idKotak;
             document.getElementById('editAhliNama').value = data.name || "";
             document.getElementById('editAhliHubungan').value = data.relationship || "";
@@ -345,19 +329,17 @@ window.bukaModalEdit = async (idKotak) => {
 
             const radioStatus = document.querySelector(`input[name="editStatus"][value="${data.status === 'meninggal' ? 'meninggal' : 'hidup'}"]`);
             if (radioStatus) radioStatus.checked = true;
-            window.tukarStatus('edit');
-            
-            // Logik Khas: Jika ini 'Diri Sendiri', benarkan dia edit Nama Akaun Keluarga
+            if (window.tukarStatus) window.tukarStatus('edit');
+
             const groupAkaun = document.getElementById('groupEditAkaun');
             if (data.is_root) {
                 groupAkaun.classList.remove('hidden');
-                // Tarik nama akaun dari data pengguna (user)
                 const snapPengguna = await getDoc(doc(db, "mynasab_users", penggunaSemasa.uid));
                 document.getElementById('editAkaunKeluarga').value = snapPengguna.data().name || "";
             } else {
                 groupAkaun.classList.add('hidden');
             }
-            
+
             document.getElementById('modalEditAhli').classList.remove('hidden');
         }
     } catch (error) {
@@ -365,15 +347,15 @@ window.bukaModalEdit = async (idKotak) => {
     }
 };
 
-// --- LOGIK EDIT AHLI (UNTUK GAMBAR) ---
 const formEdit = document.getElementById('formEditAhli');
-if(formEdit) {
+if (formEdit) {
     formEdit.addEventListener('submit', async (e) => {
         e.preventDefault();
         const idKotak = document.getElementById('editAhliId').value;
         const groupAkaun = document.getElementById('groupEditAkaun');
         const failGambarEdit = document.getElementById('editAhliGambar').files[0];
-        
+        const radioTerpilih = document.querySelector('input[name="editStatus"]:checked');
+
         try {
             let dataUpdate = {
                 name: document.getElementById('editAhliNama').value,
@@ -382,80 +364,73 @@ if(formEdit) {
                 city: document.getElementById('editAhliBandar').value,
                 state: document.getElementById('editAhliNegeri').value,
                 gender: document.getElementById('editAhliJantina').value,
-                status: document.querySelector('input[name="editStatus"]:checked').value,
+                status: radioTerpilih ? radioTerpilih.value : 'hidup',
                 updated_at: new Date()
             };
 
-            // JIKA DIA UPLOAD GAMBAR BARU MASA EDIT
             if (failGambarEdit) {
                 const refPengguna = doc(db, "mynasab_users", penggunaSemasa.uid);
                 const snapPengguna = await getDoc(refPengguna);
                 const bakiTerkini = snapPengguna.data().credit_balance;
-                
+
                 if (bakiTerkini < 1) {
                     alert("Anda tiada kredit yang cukup (1 Kredit diperlukan) untuk menukar gambar.");
                     return;
                 }
-                
+
                 alert("Sedang memuat naik gambar baru. Sila tunggu...");
-                // Tolak 1 kredit
                 await updateDoc(refPengguna, { credit_balance: increment(-1) });
                 document.getElementById('creditBalance').innerText = bakiTerkini - 1;
 
-                // Upload
                 const storageRef = ref(storage, `profil_pictures/${penggunaSemasa.uid}_${Date.now()}_${failGambarEdit.name}`);
                 await uploadBytes(storageRef, failGambarEdit);
                 dataUpdate.photo_url = await getDownloadURL(storageRef);
             }
 
-            // Kemas kini Nama Akaun Jika Diri Sendiri
             if (!groupAkaun.classList.contains('hidden')) {
                 const namaAkaunBaru = document.getElementById('editAkaunKeluarga').value;
                 await updateDoc(doc(db, "mynasab_users", penggunaSemasa.uid), { name: namaAkaunBaru });
-                document.getElementById('treeNameDisplay').innerText = namaAkaunBaru; 
+                document.getElementById('treeNameDisplay').innerText = namaAkaunBaru;
             }
 
-            // Kemas kini Firestore
             await updateDoc(doc(db, "mynasab_nodes", idKotak), dataUpdate);
-            
+
             alert("Profil berjaya dikemas kini!");
             document.getElementById('modalEditAhli').classList.add('hidden');
-            window.muatTurunSalasilah(); 
-            
+            window.muatTurunSalasilah();
+
         } catch (error) {
             alert("Gagal mengemas kini profil: " + error.message);
         }
     });
 }
 
-// --- 7. FUNGSI PREVIEW & AUTO-LAYOUT (GENERASI PENUH & UMUR) ---
+// --- 7. PREVIEW "KELUARGA SAYA" ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
 
     const pp = document.getElementById('pilihanPaparan'); if (pp) pp.value = 'saya';
-    
+
     document.getElementById('modalPreview').classList.remove('hidden');
     document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok keturunan...</p>';
-    window.autoMuat();
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
-        
+
         let diriSendiri = null;
         let pasangan = [];
         let ibuBapa = [], datukNenek = [], moyang = [], buyut = [], cakawari = [], cilawagi = [];
         let mertua = [];
         let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
         let menantuKeturunan = [];
-        
+
         const semuaId = new Set(querySnapshot.docs.map(s => s.id));
-        
-        // Agihan Baldi Generasi
+
         querySnapshot.forEach((docSnap) => {
             const d = { ...docSnap.data(), id: docSnap.id };
-            let hub = d.relationship.toLowerCase();
+            const hub = (d.relationship || '').toLowerCase();
             if (d.is_root) diriSendiri = d;
             else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
             else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
@@ -470,46 +445,35 @@ window.bukaPreview = async () => {
             else if (hub === "cicit") cicit.push(d);
             else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
             else if (hub.includes("oneng")) oneng.push(d);
-            else if (hub.includes("menantu") || hub.includes("pasangan cucu")) menantuKeturunan.push(d); // <-- TAMBAHAN BARU
+            else if (hub.includes("menantu") || hub.includes("pasangan cucu")) menantuKeturunan.push(d);
         });
 
-        // Pengiraan Umur Berdasarkan 2026
-        const kiraUmur = (dobStr) => {
-            if (!dobStr) return '';
-            const tahunLahir = parseInt(dobStr.split('-')[0], 10);
-            const umur = 2026 - tahunLahir;
-            return `Lahir: ${tahunLahir} (${umur} thn)`;
-        };
-
         const binaKotak = (ahli, kategory) => {
-            let tema = 'theme-neutral'; 
-            let hub = ahli.relationship.toLowerCase();
-            
+            let tema = 'theme-neutral';
+            const hub = (ahli.relationship || '').toLowerCase();
+
             if (ahli.gender === 'L') tema = 'theme-lelaki';
             else if (ahli.gender === 'P') tema = 'theme-perempuan';
             else if (hub.match(/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/)) tema = 'theme-lelaki';
             else if (hub.match(/ibu|isteri|nenek/)) tema = 'theme-perempuan';
-            else if (kategory === 'diri' || hub.includes('anak') || hub.includes('cucu') || hub.includes('cicit') || hub.includes('piut') || hub.includes('oneng')) tema = 'theme-neutral';
 
             let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
             if (ahli.photo_url && ahli.photo_url !== "") {
-                paparanAvatar = `<img src="${ahli.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                paparanAvatar = `<img src="${esc(ahli.photo_url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
             }
 
             return `
                 <div class="mh-card ${tema}">
-                    <div class="badge-mini">${ahli.relationship}</div>
+                    <div class="badge-mini">${esc(ahli.relationship)}</div>
                     <div class="mh-avatar">${paparanAvatar}</div>
                     <div class="mh-details">
-                        <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
+                        <p class="mh-name" title="${esc(ahli.name)}">${esc(ahli.name)}</p>
                         <p class="mh-info" style="font-size: 10px;">${infoLahir(ahli)}</p>
                     </div>
                 </div>
             `;
         };
 
-               // Cari ibu bapa seseorang di peringkat atas seterusnya
-        // utama = orang yang dapat data lama (tiada ref_id)
         const cariIbuBapa = (ahli, levels, utama) => {
             const idx = levels.findIndex(arr => arr.length > 0);
             if (idx === -1) return { senarai: [], sisa: [] };
@@ -520,8 +484,8 @@ window.bukaPreview = async () => {
         };
 
         const lelaki = x => x.gender
-    ? x.gender === 'L'   // kalau jantina dah ditetapkan, ikut jantina
-    : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test(x.relationship.toLowerCase()); // data lama sahaja
+            ? x.gender === 'L'
+            : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
 
         const binaTiangAtasan = (ahli, levels = [], kategoryAhli = 'neutral', utama = true) => {
             let str = `<div class="pillar">`;
@@ -533,7 +497,6 @@ window.bukaPreview = async () => {
 
                 let kelas = "couple-wrapper ancestor-couple has-children";
                 if (ibu) kelas += " has-spouse";
-                // Kedua-dua belah ada ibu bapa: jarakkan supaya tak bertindih
                 const bapaAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
                 const ibuAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
                 if (bapaAda && ibuAda) kelas += " anc-both";
@@ -549,38 +512,36 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Umur
         const renderKeturunan = (levels) => {
-            let firstLevelIndex = levels.findIndex(arr => arr.length > 0);
+            const firstLevelIndex = levels.findIndex(arr => arr.length > 0);
             if (firstLevelIndex === -1) return '';
-            
-            let levelData = levels[firstLevelIndex];
-            
+
+            const levelData = levels[firstLevelIndex];
+
             levelData.sort((a, b) => {
                 if (!a.dob) return 1;
                 if (!b.dob) return -1;
                 return new Date(a.dob) - new Date(b.dob);
             });
-            
-            let remainingLevels = levels.slice(firstLevelIndex + 1);
-            let hasLower = remainingLevels.some(arr => arr.length > 0);
+
+            const remainingLevels = levels.slice(firstLevelIndex + 1);
+            const hasLower = remainingLevels.some(arr => arr.length > 0);
 
             let str = `<ul>`;
             levelData.forEach((anak, index) => {
-                let showLowerHere = (index === Math.floor(levelData.length / 2)) && hasLower;
-                
-                // Cari jika anak/cucu ini ada pasangan yang dipautkan padanya (ref_id)
-                let pasanganAnakIni = menantuKeturunan.filter(m => m.ref_id === anak.id);
-                
+                const showLowerHere = (index === Math.floor(levelData.length / 2)) && hasLower;
+
+                const pasanganAnakIni = menantuKeturunan.filter(m => m.ref_id === anak.id);
+
                 let classW = "couple-wrapper" + (showLowerHere ? " has-children" : "");
                 if (pasanganAnakIni.length > 0) classW += " has-spouse";
-                
-                // Susun: Suami (Lelaki) Kiri, Isteri (Perempuan) Kanan
-                let gabung = [anak, ...pasanganAnakIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
-                
+
+                // Lelaki kiri, perempuan kanan
+                const gabung = [anak, ...pasanganAnakIni].sort((a, b) => (b.gender === 'L') - (a.gender === 'L'));
+
                 let htmlKumpulan = '';
                 gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
-                
+
                 str += `<li>`;
                 str += `<div class="${classW}">${htmlKumpulan}</div>`;
                 if (showLowerHere) str += renderKeturunan(remainingLevels);
@@ -591,58 +552,55 @@ window.bukaPreview = async () => {
         };
 
         let htmlLayout = '<div class="tree"><ul><li>';
-        
-        let senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
-        let adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
-        let adaPasangan = pasangan.length > 0;
-        
+
+        const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
+        const adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
+        const adaPasangan = pasangan.length > 0;
+
         let classWrapper = "couple-wrapper main-couple";
         if (adaPasangan) classWrapper += " has-spouse";
         if (adaKeturunan) classWrapper += " has-children";
-        
+
         htmlLayout += `<div class="${classWrapper}">`;
-        
-        // --- SUSUNAN PASANGAN UTAMA (Suami sentiasa KIRI, Isteri KANAN) ---
-        let mainArray = [];
+
+        const mainArray = [];
         if (diriSendiri) mainArray.push(diriSendiri);
         pasangan.forEach(p => mainArray.push(p));
-        
+
         mainArray.sort((a, b) => {
-            let aLelaki = a.gender === 'L' || a.relationship.toLowerCase().match(/suami|ayah|bapa/);
-            let bLelaki = b.gender === 'L' || b.relationship.toLowerCase().match(/suami|ayah|bapa/);
+            const aLelaki = a.gender === 'L' || (a.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
+            const bLelaki = b.gender === 'L' || (b.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
             if (aLelaki && !bLelaki) return -1;
             if (!aLelaki && bLelaki) return 1;
             return 0;
         });
 
-        mainArray.forEach((p, idx) => {
+        mainArray.forEach((p) => {
             if (p.is_root) {
-                // Masukkan semua senarai nenek moyang ke atas
                 htmlLayout += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
             } else {
-                // Mertua: ikut ref_id; data lama pergi ke pasangan pertama
                 htmlLayout += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
-        
+
         htmlLayout += `</div>`;
-        
-        // --- JANA CUCU CICIT PIUT ONENG (Ikut umur) ---
+
         if (adaKeturunan) {
             htmlLayout += renderKeturunan(senaraiKeturunan);
         }
-        
+
         htmlLayout += `</li></ul></div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
+        window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
-        document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${error.message}</p>`;
+        document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
     }
 };
 
 // --- 8. SAIZ KERTAS & CETAK ---
-const SAIZ_KERTAS = { A4: { w: 297, h: 210 }, A3: { w: 420, h: 297 }, A1: { w: 841, h: 594 } }; // landscape (mm)
-const MM = 3.78; // 1mm ≈ 3.78px
+const SAIZ_KERTAS = { A4: { w: 297, h: 210 }, A3: { w: 420, h: 297 }, A1: { w: 841, h: 594 } };
+const MM = 3.78;
 
 window.tukarSaizKertas = () => {
     const saiz = document.getElementById('pilihanSaizKertas').value;
@@ -663,7 +621,6 @@ window.cetakSalasilah = () => {
     const pokok = ruang.querySelector('.tree');
     const tajuk = document.getElementById('tajukKeluargaCetak');
 
-    // Sesuaikan pokok ikut lebar DAN tinggi kertas (besar/kecil ikut saiz kertas)
     ruang.style.zoom = 1;
     if (pokok) {
         const lebarMuat = (SAIZ_KERTAS[saiz].w - 20) * MM;
@@ -673,27 +630,26 @@ window.cetakSalasilah = () => {
     }
 
     window.addEventListener('afterprint', () => { ruang.style.zoom = zoomSemasa; }, { once: true });
-    setTimeout(() => window.print(), 100); // bagi masa browser susun semula
+    setTimeout(() => window.print(), 100);
 };
 
-// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" (DITAMBAH SOKONGAN PASANGAN) ---
+// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" (+ PASANGAN ANAK/CUCU) ---
 const RUJUKAN = {
     "Datuk": ["Ayah","Ibu"], "Nenek": ["Ayah","Ibu"],
     "Moyang": ["Datuk","Nenek"], "Buyut": ["Moyang"],
     "Cakawari": ["Buyut"], "Cilawagi": ["Cakawari"],
     "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"],
-    "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"] // <-- TAMBAHAN BARU
+    "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"]
 };
 
 window.siapkanRujukan = async (hubungan) => {
     const kumpulan = document.getElementById('groupRujukan');
     const sel = document.getElementById('tambahRujukan');
-    const labelRujukan = kumpulan.querySelector('label'); // Tangkap label soalan
+    const labelRujukan = kumpulan.querySelector('label');
     const sasaran = RUJUKAN[hubungan];
-    
+
     if (!sasaran || !penggunaSemasa) { kumpulan.classList.add('hidden'); sel.innerHTML = ''; return; }
 
-    // Ubah ayat soalan supaya logik untuk Menantu
     if (hubungan === "Menantu" || hubungan === "Pasangan Cucu") {
         labelRujukan.innerText = `Suami/Isteri kepada ${sasaran[0]} yang mana?`;
     } else {
@@ -703,9 +659,18 @@ window.siapkanRujukan = async (hubungan) => {
     const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
     const pilihan = snap.docs.filter(s => sasaran.includes(s.data().relationship));
     sel.innerHTML = pilihan.length
-        ? pilihan.map(s => `<option value="${s.id}">${s.data().name} (${s.data().relationship})</option>`).join('')
-        : `<option value="">-- Tambah ${sasaran[0]} dahulu --</option>`;
+        ? pilihan.map(s => `<option value="${esc(s.id)}">${esc(s.data().name)} (${esc(s.data().relationship)})</option>`).join('')
+        : `<option value="">-- Tambah ${esc(sasaran[0])} dahulu --</option>`;
     kumpulan.classList.remove('hidden');
+};
+
+// Serasi dengan pengendali lama dalam index.html (jika masih digunakan)
+window.muatSenaraiRujukan = async (hubungan) => {
+    if (!penggunaSemasa) return [];
+    const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
+    return snap.docs
+        .filter(s => s.data().relationship === hubungan)
+        .map(s => ({ id: s.id, name: s.data().name }));
 };
 
 // --- 10. JEMPUT ADIK-BERADIK ---
@@ -713,9 +678,9 @@ window.bukaJemput = async () => {
     const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
     const calon = snap.docs.filter(s => s.data().is_root || /suami|isteri/i.test(s.data().relationship));
     document.getElementById('jemputSasaran').innerHTML =
-        calon.map(s => `<option value="${s.id}">Adik-beradik ${s.data().name}</option>`).join('');
+        calon.map(s => `<option value="${esc(s.id)}">Adik-beradik ${esc(s.data().name)}</option>`).join('');
     document.getElementById('hasilPautan').classList.add('hidden');
-    window.muatMenunggu();   // ← tambah
+    window.muatMenunggu();
     document.getElementById('modalJemput').classList.remove('hidden');
 };
 
@@ -737,9 +702,6 @@ window.janaPautan = async () => {
 window.salinPautan = () => {
     navigator.clipboard.writeText(document.getElementById('inputPautan').value);
     alert("Pautan disalin!");
-
-    window.muatMenunggu();   
-    
 };
 
 window.muatMenunggu = async () => {
@@ -785,10 +747,8 @@ window.tolakPautan = async (uid) => {
 };
 
 // --- 11. POKOK BESAR (KELUARGA DIPAUTKAN) ---
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
 window.tukarPaparan = (kekal = false) => {
-    kekalZoom = (kekal === true);   // sembunyi/papar: kekalkan zoom pengguna
+    kekalZoom = (kekal === true);
     const v = document.getElementById('pilihanPaparan').value;
     if (v === 'saya') return window.bukaPreview();
     window.bukaPreviewBesar(v.replace('besar_', ''));
@@ -809,7 +769,6 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
     const ruang = document.getElementById('ruangAutoLayout');
     document.getElementById('modalPreview').classList.remove('hidden');
     ruang.innerHTML = '<p>Sedang melukis pokok keluarga besar...</p>';
-    window.autoMuat();
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
@@ -840,12 +799,12 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const akaun = await Promise.all(pautan.map(async p => ({ uid: p.uid, sasaran: p.sasaran_id, nod: await ambil(p.uid) })));
 
         const kelompok = (nod) => {
-            const k = { diri: null, pasangan: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []] };
+            const k = { diri: null, pasangan: [], menantu: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []] };
             nod.forEach(d => {
                 const h = (d.relationship || '').toLowerCase();
                 if (d.is_root) k.diri = d;
-                else if (!d.is_root && d.owner_uid !== saya && /suami|isteri/i.test(h)) return; // <-- PUNCA ERROR SEBELUM NI (Tukar 'n' kepada 'd')
                 else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
+                else if (h.includes('menantu') || h.includes('pasangan cucu')) k.menantu.push(d);
                 else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
                 else if (h.includes('mertua')) k.mertua.push(d);
                 else if (h.includes('datuk') || h.includes('nenek')) k.datukNenek.push(d);
@@ -878,16 +837,17 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                 return sasaranUid[n.owner_uid] === indukRootId ? 'Adik-beradik' : (sayaInduk ? 'Ipar' : 'Keluarga');
             }
             if (n.owner_uid !== saya) {
+                if (/suami|isteri/i.test(h)) return 'Ipar';
                 if (h === 'Anak') return 'Anak saudara';
                 if (h === 'Cucu') return 'Cucu saudara';
                 if (h === 'Cicit') return 'Cicit saudara';
+                if (h === 'Menantu') return 'Ipar';
             }
             return h;
         };
 
         const SVG = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
 
-        // PENTING: semua teks pengguna lain di-escape (elak skrip berniat jahat)
         const binaKotak = (a, butangSembunyi = false) => {
             const h = (a.relationship || '').toLowerCase();
             let tema = 'theme-neutral';
@@ -896,16 +856,15 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             else if (/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/.test(h)) tema = 'theme-lelaki';
             else if (/ibu|isteri|nenek/.test(h)) tema = 'theme-perempuan';
             const avatar = a.photo_url ? `<img src="${esc(a.photo_url)}" style="width:100%;height:100%;object-fit:cover;">` : SVG;
-            const umur = infoLahir(a);
             const btn = butangSembunyi
                 ? `<button class="btn-sembunyi" title="Sembunyikan keluarga ini" onclick="window.sembunyiAkaun('${esc(a.owner_uid)}')">✕</button>` : '';
             return `<div class="mh-card ${tema}">${btn}<div class="badge-mini">${esc(label(a))}</div>
                 <div class="mh-avatar">${avatar}</div>
                 <div class="mh-details"><p class="mh-name" title="${esc(a.name)}">${esc(a.name)}</p>
-                <p class="mh-info" style="font-size:10px;">${umur}</p></div></div>`;
+                <p class="mh-info" style="font-size:10px;">${infoLahir(a)}</p></div></div>`;
         };
 
-        // --- Leluhur ke atas (sama logik dengan paparan lama) ---
+        // --- Leluhur ke atas ---
         const lelaki = x => x.gender ? x.gender === 'L'
             : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
         const jantinaL = x => x.gender ? x.gender === 'L' : /suami|ayah|bapa/.test((x.relationship || '').toLowerCase());
@@ -941,8 +900,8 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, true)}${ibu ? binaTiangAtasan(ibu, sisa, false) : ''}</div>`;
         };
 
-        // --- Keturunan ke bawah (sama logik dengan paparan lama) ---
-        const renderKeturunan = (levels) => {
+        // --- Keturunan ke bawah (dengan pasangan anak/cucu) ---
+        const renderKeturunan = (levels, menantu = []) => {
             const idx = levels.findIndex(a => a.length > 0);
             if (idx === -1) return '';
             const data = levels[idx].sort((a, b) => !a.dob ? 1 : !b.dob ? -1 : new Date(a.dob) - new Date(b.dob));
@@ -951,7 +910,10 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             let s = '<ul>';
             data.forEach((n, i) => {
                 const bawah = (i === Math.floor(data.length / 2)) && adaBawah;
-                s += `<li><div class="couple-wrapper${bawah ? ' has-children' : ''}"><div class="pillar">${binaKotak(n)}</div></div>${bawah ? renderKeturunan(sisa) : ''}</li>`;
+                const psg = menantu.filter(m => m.ref_id === n.id);
+                const orang = [n, ...psg].sort((a, b) => (b.gender === 'L') - (a.gender === 'L'));
+                const kelas = 'couple-wrapper' + (psg.length ? ' has-spouse' : '') + (bawah ? ' has-children' : '');
+                s += `<li><div class="${kelas}">${orang.map(p => `<div class="pillar">${binaKotak(p)}</div>`).join('')}</div>${bawah ? renderKeturunan(sisa, menantu) : ''}</li>`;
             });
             return s + '</ul>';
         };
@@ -963,7 +925,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             let s = `<div class="${kelas}">`;
             orang.forEach(p => { s += `<div class="pillar">${binaKotak(p, bolehSembunyi && p.is_root)}</div>`; });
             s += '</div>';
-            if (adaAnak) s += renderKeturunan(k.turun.map(a => [...a]));
+            if (adaAnak) s += renderKeturunan(k.turun.map(a => [...a]), k.menantu);
             return s;
         };
 
@@ -979,7 +941,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                 if (sembunyi.includes(a.uid)) { hiddenList.push({ uid: a.uid, nama: k.diri.name }); return; }
                 entri.push({ t: tarikh(k.diri), html: binaRumah(k, susunKiri([k.diri, ...k.pasangan]), a.uid !== saya) });
             });
-            entri.sort((x, y) => x.t - y.t); // paling tua di kiri
+            entri.sort((x, y) => x.t - y.t);
 
             let isi;
             if (ibuBapa.length) {
@@ -1015,6 +977,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             ? `<div class="bar-sembunyi">Disembunyikan: ${hiddenList.map(h => `${esc(h.nama)} <button onclick="window.paparAkaun('${esc(h.uid)}')">Papar</button>`).join(' ')}</div>` : '';
         ruang.innerHTML = `<div class="tree pokok-besar">${sisi.map(s =>
             `<div class="sisi-pokok">${tunjukJudul ? `<h3 class="judul-belah">${esc(s.judul)}</h3>` : ''}${s.isi}</div>`).join('')}</div>${bar}`;
+        window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
         ruang.innerHTML = `<p style="color:red;">Gagal menjana pokok besar: ${esc(error.message)}</p>`;
@@ -1042,8 +1005,8 @@ window.autoMuat = (paksa = false) => {
     const ruang = document.getElementById('ruangAutoLayout');
     const pokok = ruang.querySelector('.tree');
     if (!pokok) return;
-    ruang.style.zoom = 1; // ukur pada saiz sebenar
-    const lebarSedia = document.getElementById('kertasCetak').clientWidth - 80; // tolak padding 40px kiri+kanan
+    ruang.style.zoom = 1;
+    const lebarSedia = document.getElementById('kertasCetak').clientWidth - 80;
     terapZoom(Math.min(1, lebarSedia / pokok.scrollWidth));
 };
 
