@@ -242,11 +242,6 @@
 }
 .mh-info { font-size: 10px; line-height: 1.2; margin: 2px 0 0; }
 
-window.tukarStatus = (awalan) => {
-    const mati = document.querySelector(`input[name="${awalan}Status"]:checked`).value === 'meninggal';
-    document.getElementById(awalan + 'DobGroup').classList.toggle('hidden', mati);
-};
-formTambah.addEventListener('reset', () => setTimeout(() => window.tukarStatus('tambah'), 0));
 
 .tree li > .couple-wrapper.has-children:not(.main-couple):not(.ancestor-couple)::after {
     content: ''; position: absolute; bottom: 0; left: 50%; height: 29px;
@@ -653,7 +648,7 @@ formTambah.addEventListener('reset', () => setTimeout(() => window.tukarStatus('
     </div>
 
     <!-- Muatkan app.js -->
-    <script type="module" src="app.js?v=10"></script>
+    <script type="module" src="app.js?v=11"></script>
     
     <!-- Skrip UI Mudah -->
     <script>
@@ -698,6 +693,14 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
     if (window.siapkanRujukan) window.siapkanRujukan(this.value);
 });
 
+// Status Hidup / Meninggal dunia: sembunyi tarikh lahir bila meninggal
+window.tukarStatus = (awalan) => {
+    const radio = document.querySelector(`input[name="${awalan}Status"]:checked`);
+    const mati = radio && radio.value === 'meninggal';
+    document.getElementById(awalan + 'DobGroup').classList.toggle('hidden', !!mati);
+};
+document.getElementById('formTambahAhli').addEventListener('reset', () => setTimeout(() => window.tukarStatus('tambah'), 0));
+        
             const groupRujukan = document.getElementById('groupRujukan');
             const labelRujukan = groupRujukan.querySelector('label');
             const selectRujukan = document.getElementById('tambahRujukan');
