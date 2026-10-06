@@ -433,7 +433,8 @@ window.bukaPreview = async () => {
         let ibuBapa = [], datukNenek = [], moyang = [], buyut = [], cakawari = [], cilawagi = [];
         let mertua = [];
         let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
-
+        let menantuKeturunan = [];
+        
         const semuaId = new Set(querySnapshot.docs.map(s => s.id));
         
         // Agihan Baldi Generasi
@@ -454,6 +455,7 @@ window.bukaPreview = async () => {
             else if (hub === "cicit") cicit.push(d);
             else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
             else if (hub.includes("oneng")) oneng.push(d);
+            else if (hub.includes("menantu") || hub.includes("pasangan cucu")) menantuKeturunan.push(d); // <-- TAMBAHAN BARU
         });
 
         // Pengiraan Umur Berdasarkan 2026
@@ -539,7 +541,6 @@ window.bukaPreview = async () => {
             
             let levelData = levels[firstLevelIndex];
             
-            // Susun dari paling tua ke muda (kiri ke kanan)
             levelData.sort((a, b) => {
                 if (!a.dob) return 1;
                 if (!b.dob) return -1;
@@ -551,12 +552,22 @@ window.bukaPreview = async () => {
 
             let str = `<ul>`;
             levelData.forEach((anak, index) => {
-                // Cantumkan generasi bawah pada anak yang berada di tengah supaya pokok seimbang
                 let showLowerHere = (index === Math.floor(levelData.length / 2)) && hasLower;
+                
+                // Cari jika anak/cucu ini ada pasangan yang dipautkan padanya (ref_id)
+                let pasanganAnakIni = menantuKeturunan.filter(m => m.ref_id === anak.id);
+                
                 let classW = "couple-wrapper" + (showLowerHere ? " has-children" : "");
+                if (pasanganAnakIni.length > 0) classW += " has-spouse";
+                
+                // Susun: Suami (Lelaki) Kiri, Isteri (Perempuan) Kanan
+                let gabung = [anak, ...pasanganAnakIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+                
+                let htmlKumpulan = '';
+                gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
                 
                 str += `<li>`;
-                str += `<div class="${classW}"><div class="pillar">${binaKotak(anak, 'anak')}</div></div>`;
+                str += `<div class="${classW}">${htmlKumpulan}</div>`;
                 if (showLowerHere) str += renderKeturunan(remainingLevels);
                 str += `</li>`;
             });
@@ -650,19 +661,29 @@ window.cetakSalasilah = () => {
     setTimeout(() => window.print(), 100); // bagi masa browser susun semula
 };
 
-// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" ---
+// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" (DITAMBAH SOKONGAN PASANGAN) ---
 const RUJUKAN = {
     "Datuk": ["Ayah","Ibu"], "Nenek": ["Ayah","Ibu"],
     "Moyang": ["Datuk","Nenek"], "Buyut": ["Moyang"],
     "Cakawari": ["Buyut"], "Cilawagi": ["Cakawari"],
-    "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"]
+    "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"],
+    "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"] // <-- TAMBAHAN BARU
 };
 
 window.siapkanRujukan = async (hubungan) => {
     const kumpulan = document.getElementById('groupRujukan');
     const sel = document.getElementById('tambahRujukan');
+    const labelRujukan = kumpulan.querySelector('label'); // Tangkap label soalan
     const sasaran = RUJUKAN[hubungan];
+    
     if (!sasaran || !penggunaSemasa) { kumpulan.classList.add('hidden'); sel.innerHTML = ''; return; }
+
+    // Ubah ayat soalan supaya logik untuk Menantu
+    if (hubungan === "Menantu" || hubungan === "Pasangan Cucu") {
+        labelRujukan.innerText = `Suami/Isteri kepada ${sasaran[0]} yang mana?`;
+    } else {
+        labelRujukan.innerText = `Ibu/bapa kepada siapa?`;
+    }
 
     const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
     const pilihan = snap.docs.filter(s => sasaran.includes(s.data().relationship));
