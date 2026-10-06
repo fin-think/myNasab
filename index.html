@@ -247,6 +247,11 @@ window.tukarStatus = (awalan) => {
     document.getElementById(awalan + 'DobGroup').classList.toggle('hidden', mati);
 };
 formTambah.addEventListener('reset', () => setTimeout(() => window.tukarStatus('tambah'), 0));
+
+.tree li > .couple-wrapper.has-children:not(.main-couple):not(.ancestor-couple)::after {
+    content: ''; position: absolute; bottom: 0; left: 50%; height: 29px;
+    border-left: 1px solid #a0a0a0; z-index: 1; transform: translateX(-50%);
+}
        
     </style>
 </head>
@@ -687,10 +692,11 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
 });
 
 // Auto-pilih jantina & urus dropdown rujukan (Pasangan Anak/Cucu)
-        document.getElementById('tambahHubungan').addEventListener('change', async function() {
-            const val = this.value;
-            const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
-            if(peta[val]) document.getElementById('tambahJantina').value = peta[val];
+        document.getElementById('tambahHubungan').addEventListener('change', function () {
+    const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+    if (peta[this.value]) document.getElementById('tambahJantina').value = peta[this.value];
+    if (window.siapkanRujukan) window.siapkanRujukan(this.value);
+});
 
             const groupRujukan = document.getElementById('groupRujukan');
             const labelRujukan = groupRujukan.querySelector('label');
