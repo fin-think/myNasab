@@ -25,6 +25,19 @@ const db = getFirestore(app);
 const storage = getStorage(app); // INISIALISASI STORAGE
 let penggunaSemasa = null;
 
+// --- JEMPUTAN: baca ?jemput=KOD dari pautan ---
+const kodJemput = new URLSearchParams(location.search).get('jemput');
+let jemputan = null;
+if (kodJemput) {
+    getDoc(doc(db, "mynasab_invites", kodJemput)).then(s => {
+        if (!s.exists()) { alert("Pautan jemputan tidak sah atau telah tamat."); return; }
+        jemputan = s.data();
+        const b = document.getElementById('bannerJemput');
+        b.innerText = `${jemputan.nama_pengundang} menjemput anda sebagai adik-beradik ${jemputan.nama_sasaran}. Anda akan ditempatkan di bawah ibu bapa yang sama. Dengan mendaftar, nama dan maklumat salasilah anda boleh dilihat oleh keluarga yang dipautkan.`;
+        b.classList.remove('hidden');
+    });
+}
+
 // --- 1. PENGURUSAN SESI ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -81,15 +94,26 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
         });
 
         // Cipta Diri Sendiri (Root) secara automatik dalam database
-        await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
-            owner_uid: user.uid,
-            name: namaKeluarga,
-            relationship: "Diri Sendiri (Induk)",
-            gender: jantina,
-            is_root: true,
-            created_at: new Date()
-        });
+await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
+    owner_uid: user.uid,
+    name: namaKeluarga,
+    relationship: "Diri Sendiri (Induk)",
+    gender: jantina,
+    is_root: true,
+    created_at: new Date(),
+    ...(jemputan ? { sibling_of: jemputan.sasaran_id, link_owner: jemputan.owner_uid } : {})
+});
 
+        if (jemputan) {
+            await setDoc(doc(db, "mynasab_links", user.uid), {
+                uid: user.uid,
+                owner_uid: jemputan.owner_uid,
+                sasaran_id: jemputan.sasaran_id,
+                kod: kodJemput,
+                created_at: new Date()
+            });
+        }
+        
         alert("Pendaftaran berjaya! Anda menerima 10 Kredit Kotak percuma.");
         document.getElementById('authModal').style.display = 'none'; 
     } catch (error) {
@@ -624,4 +648,34 @@ window.siapkanRujukan = async (hubungan) => {
         ? pilihan.map(s => `<option value="${s.id}">${s.data().name} (${s.data().relationship})</option>`).join('')
         : `<option value="">-- Tambah ${sasaran[0]} dahulu --</option>`;
     kumpulan.classList.remove('hidden');
+};
+
+// --- 10. JEMPUT ADIK-BERADIK ---
+window.bukaJemput = async () => {
+    const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
+    const calon = snap.docs.filter(s => s.data().is_root || /suami|isteri/i.test(s.data().relationship));
+    document.getElementById('jemputSasaran').innerHTML =
+        calon.map(s => `<option value="${s.id}">Adik-beradik ${s.data().name}</option>`).join('');
+    document.getElementById('hasilPautan').classList.add('hidden');
+    document.getElementById('modalJemput').classList.remove('hidden');
+};
+
+window.janaPautan = async () => {
+    const sel = document.getElementById('jemputSasaran');
+    if (!sel.value) return;
+    const kod = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    await setDoc(doc(db, "mynasab_invites", kod), {
+        owner_uid: penggunaSemasa.uid,
+        sasaran_id: sel.value,
+        nama_sasaran: sel.options[sel.selectedIndex].text.replace('Adik-beradik ', ''),
+        nama_pengundang: document.getElementById('treeNameDisplay').innerText,
+        created_at: new Date()
+    });
+    document.getElementById('inputPautan').value = `${location.origin}${location.pathname}?jemput=${kod}`;
+    document.getElementById('hasilPautan').classList.remove('hidden');
+};
+
+window.salinPautan = () => {
+    navigator.clipboard.writeText(document.getElementById('inputPautan').value);
+    alert("Pautan disalin!");
 };
