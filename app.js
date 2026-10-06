@@ -160,6 +160,7 @@ window.muatTurunSalasilah = async () => {
             
             // Panggil fungsi ini semula untuk paparkan data yang baru dibina
             window.muatTurunSalasilah();
+            window.muatMenunggu();   // ← tambah
             return;
         }
         
@@ -700,6 +701,7 @@ window.bukaJemput = async () => {
     document.getElementById('jemputSasaran').innerHTML =
         calon.map(s => `<option value="${s.id}">Adik-beradik ${s.data().name}</option>`).join('');
     document.getElementById('hasilPautan').classList.add('hidden');
+    window.muatMenunggu();   // ← tambah
     document.getElementById('modalJemput').classList.remove('hidden');
 };
 
@@ -727,18 +729,46 @@ window.salinPautan = () => {
 };
 
 window.muatMenunggu = async () => {
-    const el = document.getElementById('senaraiMenunggu');
-    const s = await getDocs(query(collection(db, "mynasab_links"),
-        where("owner_uid", "==", penggunaSemasa.uid), where("status", "==", "menunggu")));
-    el.innerHTML = s.empty ? '' :
-        '<p style="font-weight:bold; color:#d35400; margin:0 0 6px;">Menunggu kelulusan:</p>' +
-        s.docs.map(d => `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
-            <span>${esc(d.data().nama)}</span>
-            <span><button type="button" onclick="window.luluskanPautan('${d.id}')" style="background:#27ae60; color:#fff; border:none; border-radius:5px; padding:4px 10px; cursor:pointer;">Terima</button>
-            <button type="button" onclick="window.tolakPautan('${d.id}')" style="background:#e74c3c; color:#fff; border:none; border-radius:5px; padding:4px 10px; cursor:pointer;">Tolak</button></span></div>`).join('');
+    if (!penggunaSemasa) return;
+    const elModal = document.getElementById('senaraiMenunggu');
+    const elKad = document.getElementById('senaraiMenungguKad');
+    const kad = document.getElementById('kadMenunggu');
+    const lencana = document.getElementById('lencanaMenunggu');
+    try {
+        const s = await getDocs(query(collection(db, "mynasab_links"),
+            where("owner_uid", "==", penggunaSemasa.uid), where("status", "==", "menunggu")));
+
+        const baris = s.docs.map(d => `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee;">
+                <strong style="font-size:14px;">${esc(d.data().nama)}</strong>
+                <span style="white-space:nowrap;">
+                    <button type="button" onclick="window.luluskanPautan('${esc(d.id)}')" style="background:#27ae60; color:#fff; border:none; border-radius:5px; padding:5px 12px; cursor:pointer;">Terima</button>
+                    <button type="button" onclick="window.tolakPautan('${esc(d.id)}')" style="background:#e74c3c; color:#fff; border:none; border-radius:5px; padding:5px 12px; cursor:pointer;">Tolak</button>
+                </span>
+            </div>`).join('');
+
+        if (elKad) elKad.innerHTML = baris;
+        if (elModal) elModal.innerHTML = s.empty ? '' :
+            '<p style="font-weight:bold; color:#d35400; margin:0 0 6px;">Menunggu kelulusan:</p>' + baris;
+        if (kad) kad.classList.toggle('hidden', s.empty);
+        if (lencana) { lencana.textContent = s.size; lencana.classList.toggle('hidden', s.empty); }
+    } catch (e) { console.warn("Gagal muat senarai menunggu:", e.message); }
 };
-window.luluskanPautan = async (uid) => { await updateDoc(doc(db, "mynasab_links", uid), { status: 'aktif' }); window.muatMenunggu(); };
-window.tolakPautan = async (uid) => { await deleteDoc(doc(db, "mynasab_links", uid)); window.muatMenunggu(); };
+
+window.luluskanPautan = async (uid) => {
+    try {
+        await updateDoc(doc(db, "mynasab_links", uid), { status: 'aktif' });
+        alert("Adik-beradik diterima. Mereka kini boleh dilihat dalam Keluarga Besar.");
+    } catch (e) { alert("Gagal meluluskan: " + e.message); }
+    window.muatMenunggu();
+};
+
+window.tolakPautan = async (uid) => {
+    if (!confirm("Tolak permohonan ini?")) return;
+    try { await deleteDoc(doc(db, "mynasab_links", uid)); }
+    catch (e) { alert("Gagal menolak: " + e.message); }
+    window.muatMenunggu();
+};
 
 // --- 11. POKOK BESAR (KELUARGA DIPAUTKAN) ---
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
