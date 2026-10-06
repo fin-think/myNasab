@@ -82,16 +82,18 @@ window.logMasuk = async (emel, kataLaluan) => {
 };
 
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
+    // Semak jemputan SEBELUM cipta akaun
+    if (kodJemput && !jemputan) {
+        alert("Pautan jemputan tidak sah atau belum siap dimuatkan. Cuba lagi sebentar.");
+        return;
+    }
+    const jem = jemputan;
+    const kreditAwal = jem ? 5 : 10;
+
     try {
         const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
         const user = kredensial.user;
 
-        if (kodJemput && !jemputan) { 
-            alert("Sila tunggu sebentar, jemputan sedang disemak."); 
-            return; 
-        }
-        const kreditAwal = jemputan ? 5 : 10;
-        
         await setDoc(doc(db, "mynasab_users", user.uid), {
             name: namaKeluarga,
             email: emel,
@@ -100,29 +102,28 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
             created_at: new Date()
         });
 
-        // Cipta Diri Sendiri (Root) secara automatik dalam database
-await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
-    owner_uid: user.uid,
-    name: namaKeluarga,
-    relationship: "Diri Sendiri (Induk)",
-    gender: jantina,
-    is_root: true,
-    created_at: new Date(),
-    ...(jem ? { sibling_of: jem.sasaran_id, link_owner: jemputan.owner_uid } : {})
-});
+        await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
+            owner_uid: user.uid,
+            name: namaKeluarga,
+            relationship: "Diri Sendiri (Induk)",
+            gender: jantina,
+            is_root: true,
+            ...(jem ? { sibling_of: jem.sasaran_id, link_owner: jem.owner_uid } : {}),
+            created_at: new Date()
+        });
 
         if (jem) {
             await setDoc(doc(db, "mynasab_links", user.uid), {
                 uid: user.uid,
-                owner_uid: jemputan.owner_uid,
-                sasaran_id: jemputan.sasaran_id,
+                owner_uid: jem.owner_uid,
+                sasaran_id: jem.sasaran_id,
                 kod: kodJemput,
                 created_at: new Date()
             });
         }
-        
+
         alert(`Pendaftaran berjaya! Anda menerima ${kreditAwal} Kredit percuma.`);
-        document.getElementById('authModal').style.display = 'none'; 
+        location.href = location.pathname; // buang ?jemput= dan muat semula dashboard
     } catch (error) {
         alert("Ralat pendaftaran: " + error.message);
     }
