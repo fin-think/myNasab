@@ -232,6 +232,21 @@
     z-index: 1;
     transform: translateX(-50%);
 }
+
+.mh-details { padding: 4px 8px; }
+.mh-name {
+    font-size: 12px; line-height: 1.15;
+    white-space: normal; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.mh-info { font-size: 10px; line-height: 1.2; margin: 2px 0 0; }
+
+window.tukarStatus = (awalan) => {
+    const mati = document.querySelector(`input[name="${awalan}Status"]:checked`).value === 'meninggal';
+    document.getElementById(awalan + 'DobGroup').classList.toggle('hidden', mati);
+};
+formTambah.addEventListener('reset', () => setTimeout(() => window.tukarStatus('tambah'), 0));
        
     </style>
 </head>
@@ -346,13 +361,25 @@
     <small style="color:#7f8c8d;">Ayah/Suami/Bapa Mertua dan Ibu/Isteri/Ibu Mertua auto dipilih. Anak, pilih sendiri.</small>
 </div>
 
+<div class="input-group">
+    <label>Status</label>
+    <div style="display:flex; gap:20px;">
+        <label style="display:flex; gap:6px; align-items:center; margin:0; color:#2c3e50;">
+            <input type="radio" name="tambahStatus" value="hidup" checked style="width:auto;" onchange="window.tukarStatus('tambah')"> Hidup
+        </label>
+        <label style="display:flex; gap:6px; align-items:center; margin:0; color:#2c3e50;">
+            <input type="radio" name="tambahStatus" value="meninggal" style="width:auto;" onchange="window.tukarStatus('tambah')"> Meninggal dunia
+        </label>
+    </div>
+</div>
+                
 <div class="input-group hidden" id="groupRujukan" style="background:#eef7ff; padding:10px; border-radius:8px; border:1px solid #9ccbf0;">
     <label>Ibu/bapa kepada siapa?</label>
     <select id="tambahRujukan"></select>
 </div>
                 
                 <div style="display: flex; gap: 10px;">
-                    <div class="input-group" style="flex: 1;">
+                    <div class="input-group" style="flex: 1;" id="tambahDobGroup">
                         <label>Tarikh Lahir</label>
                         <input type="date" id="tambahDob">
                     </div>
@@ -420,8 +447,21 @@
         <option value="P">Perempuan</option>
     </select>
 </div>
+
+<div class="input-group">
+    <label>Status</label>
+    <div style="display:flex; gap:20px;">
+        <label style="display:flex; gap:6px; align-items:center; margin:0; color:#2c3e50;">
+            <input type="radio" name="editStatus" value="hidup" checked style="width:auto;" onchange="window.tukarStatus('edit')"> Hidup
+        </label>
+        <label style="display:flex; gap:6px; align-items:center; margin:0; color:#2c3e50;">
+            <input type="radio" name="editStatus" value="meninggal" style="width:auto;" onchange="window.tukarStatus('edit')"> Meninggal dunia
+        </label>
+    </div>
+</div>
+                
                 <div style="display: flex; gap: 10px;">
-                    <div class="input-group" style="flex: 1;">
+                    <div class="input-group" style="flex: 1;" id="editDobGroup">
                         <label>Tarikh Lahir</label>
                         <input type="date" id="editAhliDob">
                     </div>
@@ -701,7 +741,7 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
                 const jantina = jantinaElemen ? jantinaElemen.value : 'L'; 
                 
                 const rujukan = document.getElementById('tambahRujukan').value; // Ambil ID pasangan
-                
+               
                 if ((hubungan === 'Menantu' || hubungan === 'Pasangan Cucu') && !rujukan) {
                     alert("Sila pilih isteri/suami kepada siapa!");
                     return;
@@ -714,10 +754,11 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
                 
                 const inputGambar = document.getElementById('tambahGambar');
                 const failGambar = (inputGambar && inputGambar.files.length > 0) ? inputGambar.files[0] : null;
-                
+
+                               
                 if(window.tambahAhliBaru) {
-                    // Hantar param ekstra: rujukan
-                    window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukan);
+                const status = document.querySelector('input[name="tambahStatus"]:checked').value;
+                window.tambahAhliBaru(nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukan, status);
                 }
             };
         }
