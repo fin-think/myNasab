@@ -83,20 +83,20 @@ window.logMasuk = async (emel, kataLaluan) => {
 
 window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
     try {
-        
+        const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
+        const user = kredensial.user;
+
         if (kodJemput && !jemputan) { 
             alert("Sila tunggu sebentar, jemputan sedang disemak."); 
             return; 
         }
         const kreditAwal = jemputan ? 5 : 10;
         
-        const kredensial = await createUserWithEmailAndPassword(auth, emel, kataLaluan);
-        const user = kredensial.user;
-
         await setDoc(doc(db, "mynasab_users", user.uid), {
             name: namaKeluarga,
             email: emel,
-            credit_balance: 10,
+            credit_balance: kreditAwal,
+            pdpa: { setuju: true, tarikh: new Date(), versi: "1.0" },
             created_at: new Date()
         });
 
@@ -108,10 +108,10 @@ await setDoc(doc(db, "mynasab_nodes", "root_" + user.uid), {
     gender: jantina,
     is_root: true,
     created_at: new Date(),
-    ...(jemputan ? { sibling_of: jemputan.sasaran_id, link_owner: jemputan.owner_uid } : {})
+    ...(jem ? { sibling_of: jem.sasaran_id, link_owner: jemputan.owner_uid } : {})
 });
 
-        if (jemputan) {
+        if (jem) {
             await setDoc(doc(db, "mynasab_links", user.uid), {
                 uid: user.uid,
                 owner_uid: jemputan.owner_uid,
