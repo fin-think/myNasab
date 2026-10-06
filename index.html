@@ -653,6 +653,17 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
                 selectRujukan.innerHTML = '';
             }
         });
+
+// --- GANTIKAN DI SINI: Fungsi Buka & Tutup Borang Tambah Ahli (VERSI KEBAL) ---
+        window.bukaModalBorang = function() {
+            document.getElementById('modalTambahAhli').classList.remove('hidden');
+        };
+
+        window.tutupModalBorang = function() {
+            document.getElementById('modalTambahAhli').classList.add('hidden');
+            document.getElementById('formTambahAhli').reset();
+            document.getElementById('groupRujukan').classList.add('hidden');
+        };
         
         // TANGKAP ISIAN BORANG (DENGAN RUJUKAN)
         const formTambah = document.getElementById('formTambahAhli');
