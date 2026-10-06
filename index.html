@@ -220,7 +220,19 @@
             .btn-sembunyi, .bar-sembunyi { display: none !important; 
             }
         }
-        
+
+/* Sambung garisan dari ibu bapa terus ke garisan suami-isteri */
+.tree ul ul > li > .couple-wrapper.has-spouse::before {
+    content: '';
+    position: absolute;
+    top: -1px;            /* bertindih 1px dengan garisan atas */
+    left: 50%;
+    height: 29px;         /* sampai ke tengah kad (±27.5px) */
+    border-left: 1px solid #a0a0a0;
+    z-index: 1;
+    transform: translateX(-50%);
+}
+       
     </style>
 </head>
 <body>
