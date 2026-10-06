@@ -25,6 +25,13 @@ const db = getFirestore(app);
 const storage = getStorage(app); // INISIALISASI STORAGE
 let penggunaSemasa = null;
 
+const infoLahir = (a) => {
+    if (a.status === 'meninggal') return 'Meninggal dunia';
+    if (!a.dob) return '';
+    const t = parseInt(a.dob.split('-')[0], 10);
+    return `Lahir: ${t} (${new Date().getFullYear() - t} thn)`;
+};
+
 // --- JEMPUTAN: baca ?jemput=KOD dari pautan ---
 const kodJemput = new URLSearchParams(location.search).get('jemput');
 let jemputan = null;
@@ -203,7 +210,7 @@ window.padamAhli = async (idAhli) => {
 };
 
 // --- 5. FUNGSI TAMBAH AHLI BARU (PANTAS & TANPA NOTIFIKASI MENYEMAK) ---
-window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId) => {
+window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, negeri, failGambar, rujukanId, status = 'hidup') => {
     if (!penggunaSemasa) return;
 
     const sPautanSaya = await getDoc(doc(db, "mynasab_links", penggunaSemasa.uid));
@@ -291,6 +298,8 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             state: negeri,
             photo_url: urlGambar,
             is_root: false,
+            dob: status === 'meninggal' ? '' : dob,
+            status: status,
             created_at: new Date()
         });
 
@@ -333,6 +342,10 @@ window.bukaModalEdit = async (idKotak) => {
             document.getElementById('editAhliBandar').value = data.city || "";
             document.getElementById('editAhliNegeri').value = data.state || "";
             document.getElementById('editAhliJantina').value = data.gender || "";
+
+            const radioStatus = document.querySelector(`input[name="editStatus"][value="${data.status === 'meninggal' ? 'meninggal' : 'hidup'}"]`);
+            if (radioStatus) radioStatus.checked = true;
+            window.tukarStatus('edit');
             
             // Logik Khas: Jika ini 'Diri Sendiri', benarkan dia edit Nama Akaun Keluarga
             const groupAkaun = document.getElementById('groupEditAkaun');
@@ -369,6 +382,7 @@ if(formEdit) {
                 city: document.getElementById('editAhliBandar').value,
                 state: document.getElementById('editAhliNegeri').value,
                 gender: document.getElementById('editAhliJantina').value,
+                status: document.querySelector('input[name="editStatus"]:checked').value,
                 updated_at: new Date()
             };
 
@@ -488,7 +502,7 @@ window.bukaPreview = async () => {
                     <div class="mh-avatar">${paparanAvatar}</div>
                     <div class="mh-details">
                         <p class="mh-name" title="${ahli.name}">${ahli.name}</p>
-                        <p class="mh-info" style="font-size: 10px;">${kiraUmur(ahli.dob)}</p>
+                        <p class="mh-info" style="font-size: 10px;">${infoLahir(ahli)}</p>
                     </div>
                 </div>
             `;
@@ -882,8 +896,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             else if (/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/.test(h)) tema = 'theme-lelaki';
             else if (/ibu|isteri|nenek/.test(h)) tema = 'theme-perempuan';
             const avatar = a.photo_url ? `<img src="${esc(a.photo_url)}" style="width:100%;height:100%;object-fit:cover;">` : SVG;
-            const tahun = a.dob ? parseInt(a.dob.split('-')[0], 10) : null;
-            const umur = tahun ? `Lahir: ${tahun} (${new Date().getFullYear() - tahun} thn)` : '';
+            const umur = infoLahir(a);
             const btn = butangSembunyi
                 ? `<button class="btn-sembunyi" title="Sembunyikan keluarga ini" onclick="window.sembunyiAkaun('${esc(a.owner_uid)}')">✕</button>` : '';
             return `<div class="mh-card ${tema}">${btn}<div class="badge-mini">${esc(label(a))}</div>
