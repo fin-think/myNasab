@@ -699,6 +699,9 @@ window.janaPautan = async () => {
 window.salinPautan = () => {
     navigator.clipboard.writeText(document.getElementById('inputPautan').value);
     alert("Pautan disalin!");
+
+    window.muatMenunggu();   
+    
 };
 
 window.muatMenunggu = async () => {
@@ -772,8 +775,8 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             const k = { diri: null, pasangan: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []] };
             nod.forEach(d => {
                 const h = (d.relationship || '').toLowerCase();
-                if (d.is_root) k.diri = d;
                 if (!n.is_root && n.owner_uid !== saya && /suami|isteri/i.test(h)) return 'Ipar';
+                if (d.is_root) k.diri = d;
                 else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
                 else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
                 else if (h.includes('mertua')) k.mertua.push(d);
