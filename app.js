@@ -799,8 +799,8 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             const k = { diri: null, pasangan: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []] };
             nod.forEach(d => {
                 const h = (d.relationship || '').toLowerCase();
-                if (!n.is_root && n.owner_uid !== saya && /suami|isteri/i.test(h)) return 'Ipar';
                 if (d.is_root) k.diri = d;
+                else if (!d.is_root && d.owner_uid !== saya && /suami|isteri/i.test(h)) return; // <-- PUNCA ERROR SEBELUM NI (Tukar 'n' kepada 'd')
                 else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
                 else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
                 else if (h.includes('mertua')) k.mertua.push(d);
