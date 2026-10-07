@@ -27,23 +27,28 @@
         .btn-logout { background: transparent; border: 1px solid #e74c3c; color: #e74c3c; padding: 5px 15px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .btn-logout:hover { background: #e74c3c; color: white; }
 
-        /* Dashboard Layout (Diperlebar menjadi 3 Kolom) */
+        /* Dashboard Layout (3 Kolom Susunan Tetap) */
         .dashboard-container { 
-            max-width: 1250px; 
+            max-width: 1350px; /* Lebarkan sikit supaya muat 3 kotak */
             margin: 40px auto; 
             padding: 0 20px; 
             display: grid; 
-            grid-template-columns: 1fr 2fr 1.3fr; /* 3 Kolom */
+            grid-template-columns: 230px minmax(400px, 1fr) 330px; /* Kiri tetap, Tengah anjal, Kanan tetap */
             gap: 20px; 
+            align-items: start; /* Halang kotak dari tertarik ke bawah */
         }
         
+        .side-panel, .main-panel, .faraid-panel { 
+            display: flex; flex-direction: column; gap: 20px; 
+        }
+
+        /* Responsif untuk skrin tablet/telefon */
         @media (max-width: 1024px) {
-            .dashboard-container { grid-template-columns: 1fr 2fr; } /* 2 Kolom untuk tablet */
-            .faraid-panel { grid-column: span 2; }
+            .dashboard-container { grid-template-columns: 1fr 2fr; }
+            .faraid-panel { grid-column: 1 / -1; } 
         }
         @media (max-width: 768px) {
-            .dashboard-container { grid-template-columns: 1fr; } /* 1 Kolom untuk HP */
-            .faraid-panel { grid-column: span 1; }
+            .dashboard-container { grid-template-columns: 1fr; }
         }
         
         /* Panel Kiri: Tindakan & Info */
@@ -634,7 +639,7 @@
                 </div>
             </div>
 
-            <!-- Panel Kanan -->
+<!-- Panel Kanan -->
             <div class="main-panel">
                 <div class="card">
                     <div class="list-header">
@@ -658,12 +663,9 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-            
-        </div>
-    </div>
+            </div> <!-- Penutup main-panel -->
 
-<!-- Panel Ketiga: Ringkasan Faraid Otomatis -->
+            <!-- Panel Ketiga: Ringkasan Faraid Otomatis (MESTI DUDUK DI SINI) -->
             <div class="faraid-panel">
                 <div class="card" style="position: sticky; top: 100px;">
                     <h3 style="border-bottom: 1px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 15px; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px;">
@@ -679,9 +681,11 @@
                         <strong>Nota:</strong> Kiraan automatik ini dijana berdasarkan data ahli keluarga yang anda telah masukkan setakat ini. Tuntutan sebenar adalah tertakluk kepada pengesahan Sijil Faraid Mahkamah Syariah.
                     </div>
                 </div>
-            </div>
+            </div> <!-- Penutup faraid-panel -->
+            
+        </div> <!-- INI PENUTUP PENTING: dashboard-container -->
+    </div> <!-- Ini penutup dashboardUtama -->
 
-    
     <!-- Muatkan app.js -->
     <script type="module" src="app.js?v=11"></script>
     
