@@ -27,15 +27,17 @@
         .btn-logout { background: transparent; border: 1px solid #e74c3c; color: #e74c3c; padding: 5px 15px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .btn-logout:hover { background: #e74c3c; color: white; }
 
-        /* Dashboard Layout (3 Kolom Susunan Tetap) */
+        /* Dashboard Layout (Lebar Penuh 100%) */
         .dashboard-container { 
-            max-width: 1350px; /* Lebarkan sikit supaya muat 3 kotak */
-            margin: 40px auto; 
-            padding: 0 20px; 
+            width: 100%; /* Lebar penuh mengikut skrin */
+            max-width: 100%; /* Buang had lebar maksimum */
+            margin: 40px 0; /* Buang margin auto supaya tak ke tengah */
+            padding: 0 30px; /* Jarak sikit dari tepi skrin (sama macam top-bar) */
             display: grid; 
-            grid-template-columns: 230px minmax(400px, 1fr) 330px; /* Kiri tetap, Tengah anjal, Kanan tetap */
-            gap: 20px; 
-            align-items: start; /* Halang kotak dari tertarik ke bawah */
+            grid-template-columns: 250px 1fr 350px; /* Kiri tetap 250px, Tengah anjal (1fr), Kanan tetap 350px */
+            gap: 25px; 
+            align-items: start; 
+            box-sizing: border-box; /* Pastikan padding tak kacau lebar */
         }
         
         .side-panel, .main-panel, .faraid-panel { 
