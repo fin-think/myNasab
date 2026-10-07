@@ -174,28 +174,40 @@ window.muatTurunSalasilah = async () => {
             return;
         }
 
+        const tbody = document.getElementById('senaraiAhliTbody');
+        tbody.innerHTML = ''; 
+        
+        let senaraiUntukFaraid = []; // Tambahan untuk Faraid
+
+        // AUTO-PEMULIHAN... (Biarkan kode lama Anda di sini)
+        
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const idKotak = docSnap.id;
+            senaraiUntukFaraid.push(data); // Kumpulkan data
 
-            const nama = data.name || "Tiada Nama";
-            const hubungan = data.relationship || "Belum Ditetapkan";
-
+            // ... (Biarkan logika pembuatan tabel <tr> lama Anda berjalan di sini) ...
+            
+            let nama = data.name || "Tiada Nama";
+            let hubungan = data.relationship || "Belum Ditetapkan";
+            
             const tr = document.createElement('tr');
-
             let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
             if (!data.is_root) {
                 butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
 
             tr.innerHTML = `
-                <td><strong>${esc(nama)}</strong></td>
-                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${esc(hubungan)}</span></td>
+                <td><strong>${nama}</strong></td>
+                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${hubungan}</span></td>
                 <td>${butangTindakan}</td>
             `;
             tbody.appendChild(tr);
         });
-
+        
+        // PANGGIL MESIN FARAID SETELAH TABEL SELESAI
+        if (window.kiraFaraidAuto) window.kiraFaraidAuto(senaraiUntukFaraid);
+        
     } catch (error) { console.error("Gagal memuat turun senarai:", error); }
 };
 
@@ -1023,3 +1035,152 @@ document.addEventListener('wheel', (e) => {
     e.preventDefault();
     terapZoom(zoomSemasa * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
 }, { passive: false });
+
+// ==========================================
+// 12. ENJIN FARAID PINTAR (OTOMATIS)
+// ==========================================
+window.kiraFaraidAuto = (docs) => {
+    let isteriCount = 0, suamiCount = 0;
+    let bapa = 0, ibu = 0, datuk = 0, nenek = 0;
+    let al = 0, ap = 0;
+    let jantinaInduk = 'L'; // Asumsi Default Lelaki
+
+    // 1. Imbas seluruh senarai keluarga
+    docs.forEach(d => {
+        let rel = (d.relationship || '').toLowerCase();
+        let gen = d.gender;
+
+        if (d.is_root) { jantinaInduk = gen || 'L'; }
+        else if (rel === 'isteri') isteriCount++;
+        else if (rel === 'suami') suamiCount++;
+        else if (rel === 'ayah' || rel === 'bapa') bapa = 1;
+        else if (rel === 'ibu') ibu = 1;
+        else if (rel.includes('datuk')) datuk = 1;
+        else if (rel.includes('nenek')) nenek++;
+        else if (rel === 'anak') {
+            if (gen === 'L') al++;
+            else if (gen === 'P') ap++;
+        }
+    });
+
+    // 2. Halang logik yang bercanggah dengan jantina
+    if (jantinaInduk === 'P') isteriCount = 0;
+    if (jantinaInduk === 'L') suamiCount = 0;
+
+    const hasChild = (al + ap) > 0;
+    let results = [];
+    let BASE = 24;
+    let sumFardu = 0;
+
+    // 3. PENGIRAAN FARDU
+    if (isteriCount > 0) {
+        results.push({ name: isteriCount > 1 ? `${isteriCount} Isteri` : 'Isteri', share: hasChild ? 3 : 6, type: 'Fardu', color: '#1abc9c' });
+    }
+    if (suamiCount > 0) {
+        results.push({ name: 'Suami', share: hasChild ? 6 : 12, type: 'Fardu', color: '#1abc9c' });
+    }
+    if (ibu > 0) {
+        results.push({ name: 'Ibu', share: (hasChild) ? 4 : 8, type: 'Fardu', color: '#3498db' });
+    } else if (nenek > 0) {
+        results.push({ name: 'Nenek', share: 4, type: 'Waris Ganti (Ibu)', color: '#2980b9' });
+    }
+    if (bapa > 0) {
+        results.push({ name: 'Bapa', share: 4, type: 'Fardu', color: '#2980b9' });
+    } else if (datuk > 0) {
+        results.push({ name: 'Datuk', share: 4, type: 'Waris Ganti (Bapa)', color: '#8e44ad' });
+    }
+
+    sumFardu = results.reduce((acc, r) => acc + r.share, 0);
+    let remaining = BASE - sumFardu;
+
+    // AUL (Penyebut meningkat jika jumlah fardu melebihi)
+    if (remaining < 0) {
+        results.forEach(r => { r.base = sumFardu; });
+        remaining = 0;
+        BASE = sumFardu;
+    } else {
+        results.forEach(r => { r.base = BASE; });
+    }
+
+    // 4. PENGIRAAN ASABAH (ANAK)
+    if (al > 0 || ap > 0) {
+        if (al === 0) {
+            // Hanya anak perempuan (Fardu)
+            let share = ap === 1 ? 12 : 16;
+            if (remaining < share) {
+                sumFardu += share;
+                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: sumFardu, type: 'Fardu', color: '#e056fd' });
+                results.forEach(r => r.base = sumFardu);
+                BASE = sumFardu;
+                remaining = 0;
+            } else {
+                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: BASE, type: 'Fardu', color: '#e056fd' });
+                remaining -= share;
+            }
+        } else {
+            // Asabah Bil Ghayr (Lelaki : Perempuan = 2 : 1)
+            let totalParts = (al * 2) + ap;
+            if (remaining > 0 && totalParts > 0) {
+                let shareAL = (remaining * (al * 2)) / totalParts;
+                let shareAP = (remaining * ap) / totalParts;
+                if (al > 0) results.push({ name: al > 1 ? `${al} Anak Lelaki` : 'Anak Lelaki', share: shareAL, base: BASE, type: 'Asabah', color: '#9b59b6' });
+                if (ap > 0) results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: shareAP, base: BASE, type: 'Asabah', color: '#e056fd' });
+                remaining = 0;
+            }
+        }
+    }
+
+    // 5. BAKI (BAITULMAL / ASABAH BAPA)
+    if (remaining > 0) {
+        if (bapa > 0) {
+            let b = results.find(r => r.name === 'Bapa');
+            b.share += remaining;
+            b.type = 'Fardu + Asabah';
+            remaining = 0;
+        } else if (datuk > 0) {
+            let d = results.find(r => r.name === 'Datuk');
+            d.share += remaining;
+            d.type = 'Fardu + Asabah';
+            remaining = 0;
+        } else {
+            // Jika tiada waris lelaki yang memotong baki
+            results.push({ name: 'Baitulmal / Baki', share: remaining, base: BASE, type: 'Baki Belum Diagih', color: '#95a5a6' });
+            remaining = 0;
+        }
+    }
+
+    window.renderFaraidHtml(results);
+};
+
+// 13. RENDER KAD FARAID KE HTML
+window.renderFaraidHtml = (results) => {
+    const box = document.getElementById('ruangKiraanFaraid');
+    if (!box) return;
+
+    if (results.length === 0) {
+        box.innerHTML = `<p style="font-size:13px; color:#7f8c8d; text-align:center; padding: 20px 0;">Sila tambah waris utama (Anak/Pasangan/Ibu/Bapa) untuk melihat kiraan Faraid.</p>`;
+        return;
+    }
+
+    let html = `<div style="display:flex; flex-direction:column; gap:12px;">`;
+    results.forEach(r => {
+        let perc = ((r.share / r.base) * 100).toFixed(1);
+        let shareVal = Math.round(r.share * 100) / 100;
+        
+        html += `
+        <div style="background:#fff; border:1px solid #e0e6ed; border-radius:10px; padding:12px 15px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="flex:1;">
+                <div style="font-weight:800; color:#2c3e50; font-size:14px; margin-bottom: 2px;">${r.name}</div>
+                <div style="font-size:10px; font-weight:700; color:#95a5a6; text-transform:uppercase; letter-spacing: 0.5px;">${r.type}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:800; color:#27ae60; font-size:15px;">${shareVal}/${r.base} <span style="font-weight:600; color:#bdc3c7; font-size:12px;">(${perc}%)</span></div>
+                <div style="width:70px; height:6px; background:#ecf0f1; border-radius:3px; margin-top:6px; float:right; overflow:hidden;">
+                    <div style="width:${perc}%; height:100%; background:${r.color};"></div>
+                </div>
+            </div>
+        </div>`;
+    });
+    html += `</div>`;
+    box.innerHTML = html;
+};
