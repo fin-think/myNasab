@@ -150,17 +150,20 @@ window.logKeluar = async () => {
     }
 };
 
-// --- 3. MUAT TURUN DATA KE JADUAL DASHBOARD ---
+// --- 3. FUNGSI MUAT TURUN DATA KE JADUAL DASHBOARD ---
 window.muatTurunSalasilah = async () => {
     if (!penggunaSemasa) return;
     try {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
-        const tbody = document.getElementById('senaraiAhliTbody');
-
-        tbody.innerHTML = '';
-
-        // AUTO-PEMULIHAN: jika kosong, bina 'Diri Sendiri'
+        
+        // PASTIKAN BARIS INI HANYA WUJUD SEKALI SAHAJA DALAM FUNGSI INI
+        const tbody = document.getElementById('senaraiAhliTbody'); 
+        tbody.innerHTML = ''; 
+        
+        let senaraiUntukFaraid = []; // Tambahan untuk Enjin Faraid
+        
+        // AUTO-PEMULIHAN: Jika jadual kosong, bina 'Diri Sendiri' secara automatik
         if (querySnapshot.empty) {
             const namaPenuh = document.getElementById('treeNameDisplay').innerText || "Ketua Keluarga";
             await setDoc(doc(db, "mynasab_nodes", "root_" + penggunaSemasa.uid), {
@@ -170,30 +173,26 @@ window.muatTurunSalasilah = async () => {
                 is_root: true,
                 created_at: new Date()
             });
+            
+            // Panggil fungsi ini semula untuk paparkan data yang baru dibina
             window.muatTurunSalasilah();
             return;
         }
-
-        const tbody = document.getElementById('senaraiAhliTbody');
-       
-        
-        let senaraiUntukFaraid = []; // Tambahan untuk Faraid
-
-        // AUTO-PEMULIHAN... (Biarkan kode lama Anda di sini)
         
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const idKotak = docSnap.id;
-            senaraiUntukFaraid.push(data); // Kumpulkan data
-
-            // ... (Biarkan logika pembuatan tabel <tr> lama Anda berjalan di sini) ...
+            
+            senaraiUntukFaraid.push(data); // Kumpul data untuk dikira oleh Faraid
             
             let nama = data.name || "Tiada Nama";
             let hubungan = data.relationship || "Belum Ditetapkan";
             
             const tr = document.createElement('tr');
+            
+            // Susun butang tindakan
             let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
-            if (!data.is_root) {
+            if (!data.is_root) { // Halang Diri Sendiri dari dipadam
                 butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
             }
 
@@ -205,7 +204,7 @@ window.muatTurunSalasilah = async () => {
             tbody.appendChild(tr);
         });
         
-        // PANGGIL MESIN FARAID SETELAH TABEL SELESAI
+        // PANGGIL ENJIN FARAID SELEPAS JADUAL SELESAI DIBINA
         if (window.kiraFaraidAuto) window.kiraFaraidAuto(senaraiUntukFaraid);
         
     } catch (error) { console.error("Gagal memuat turun senarai:", error); }
