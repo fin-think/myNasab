@@ -142,7 +142,12 @@ window.daftarPengguna = async (emel, kataLaluan, namaKeluarga, jantina) => {
 };
 
 window.logKeluar = async () => {
-    try { await signOut(auth); location.reload(); } catch (error) {}
+    try {
+        await signOut(auth);
+        location.href = "https://familipintar.com";
+    } catch (error) {
+        alert("Gagal log keluar: " + error.message);
+    }
 };
 
 // --- 3. MUAT TURUN DATA KE JADUAL DASHBOARD ---
