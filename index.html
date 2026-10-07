@@ -673,13 +673,21 @@
                 </div> <!-- INI PENUTUP UNTUK "CARD" -->
             </div> <!-- INI PENUTUP UNTUK "MAIN-PANEL" (Yang ni tercicir tadi!) -->
 
-            <!-- Panel Ketiga: Ringkasan Faraid Otomatis -->
+          <!-- Panel Ketiga: Ringkasan Faraid Otomatis -->
             <div class="faraid-panel">
-                 <div class="card" style="position: sticky; top: 100px;">
-                      <h3 style="border-bottom: 1px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 15px; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                <div class="card" style="position: sticky; top: 100px;">
+                    <h3 style="border-bottom: 1px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 15px; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px;">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: #d35400;"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                        Anggaran Agihan Faraid
+                        Agihan Faraid Pintar
                     </h3>
+                    
+                    <!-- TAMBAHAN BARU: Dropdown Pemilihan Sudut Pandang -->
+                    <div style="margin-bottom: 15px; background: #eef7ff; padding: 12px; border-radius: 8px; border: 1px solid #9ccbf0;">
+                        <label style="font-size: 12px; font-weight: bold; color: #2980b9; display: block; margin-bottom: 5px;">Kira Faraid Berdasarkan (Si Mati):</label>
+                        <select id="pilihanMatiFaraid" onchange="window.jalankanFaraid()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #bdc3c7; outline: none; font-weight: bold; color: #2c3e50;">
+                            <option value="root">Diri Sendiri (Induk)</option>
+                        </select>
+                    </div>
                     
                     <div id="ruangKiraanFaraid">
                         <p style="font-size: 13px; color: #7f8c8d; text-align: center;">Memuatkan data keturunan...</p>
