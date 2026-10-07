@@ -27,8 +27,24 @@
         .btn-logout { background: transparent; border: 1px solid #e74c3c; color: #e74c3c; padding: 5px 15px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .btn-logout:hover { background: #e74c3c; color: white; }
 
-        /* Dashboard Layout */
-        .dashboard-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 2.5fr; gap: 20px; }
+        /* Dashboard Layout (Diperlebar menjadi 3 Kolom) */
+        .dashboard-container { 
+            max-width: 1250px; 
+            margin: 40px auto; 
+            padding: 0 20px; 
+            display: grid; 
+            grid-template-columns: 1fr 2fr 1.3fr; /* 3 Kolom */
+            gap: 20px; 
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard-container { grid-template-columns: 1fr 2fr; } /* 2 Kolom untuk tablet */
+            .faraid-panel { grid-column: span 2; }
+        }
+        @media (max-width: 768px) {
+            .dashboard-container { grid-template-columns: 1fr; } /* 1 Kolom untuk HP */
+            .faraid-panel { grid-column: span 1; }
+        }
         
         /* Panel Kiri: Tindakan & Info */
         .side-panel { display: flex; flex-direction: column; gap: 20px; }
@@ -647,6 +663,25 @@
         </div>
     </div>
 
+<!-- Panel Ketiga: Ringkasan Faraid Otomatis -->
+            <div class="faraid-panel">
+                <div class="card" style="position: sticky; top: 100px;">
+                    <h3 style="border-bottom: 1px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 15px; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: #d35400;"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        Agihan Faraid Pintar
+                    </h3>
+                    
+                    <div id="ruangKiraanFaraid">
+                        <p style="font-size: 13px; color: #7f8c8d; text-align: center;">Memuatkan data keturunan...</p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 12px; background: #fdfaf6; border-left: 3px solid #f39c12; font-size: 11px; color: #7f8c8d; line-height: 1.4; border-radius: 0 6px 6px 0;">
+                        <strong>Nota:</strong> Kiraan automatik ini dijana berdasarkan data ahli keluarga yang anda telah masukkan setakat ini. Tuntutan sebenar adalah tertakluk kepada pengesahan Sijil Faraid Mahkamah Syariah.
+                    </div>
+                </div>
+            </div>
+
+    
     <!-- Muatkan app.js -->
     <script type="module" src="app.js?v=11"></script>
     
