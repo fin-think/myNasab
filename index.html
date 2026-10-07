@@ -649,22 +649,28 @@
                         <button class="btn-add-member" onclick="bukaModalBorang()">+ Tambah Ahli</button>
                     </div>
                     
-                    <table class="member-list">
-                        <thead>
-                            <tr>
-                                <th>Nama Lengkap</th>
-                                <th>Hubungan</th>
-                                <th>Tindakan</th>
-                            </tr>
-                        </thead>
-                        <tbody id="senaraiAhliTbody">
-                            <!-- Data akan dimuat turun dari Firebase dan masuk di sini -->
-                            <tr>
-                                <td colspan="3" style="text-align: center; color: #7f8c8d;">Memuatkan data...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <!-- Balut dengan overflow-x supaya boleh skrol jika skrin kecil -->
+                    <div style="overflow-x: auto; width: 100%;">
+                        <table class="member-list" style="min-width: 800px;">
+                            <thead>
+                                <tr>
+                                    <th>Nama Lengkap</th>
+                                    <th>Hubungan</th>
+                                    <th>Jantina</th>
+                                    <th>Tarikh Lahir (Umur)</th>
+                                    <th>Telefon</th>
+                                    <th>Lokasi</th>
+                                    <th>Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="senaraiAhliTbody">
+                                <!-- Data akan dimuat turun dari Firebase dan masuk di sini -->
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #7f8c8d;">Memuatkan data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
             </div> <!-- Penutup main-panel -->
 
             <!-- Panel Ketiga: Ringkasan Faraid Otomatis (MESTI DUDUK DI SINI) -->
