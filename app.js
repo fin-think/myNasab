@@ -157,13 +157,14 @@ window.muatTurunSalasilah = async () => {
         const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
         const querySnapshot = await getDocs(q);
         
-        // PASTIKAN BARIS INI HANYA WUJUD SEKALI SAHAJA DALAM FUNGSI INI
         const tbody = document.getElementById('senaraiAhliTbody'); 
-        tbody.innerHTML = ''; 
+        if (tbody) tbody.innerHTML = ''; 
         
-        let senaraiUntukFaraid = []; // Tambahan untuk Enjin Faraid
+        // --- TAMBAHAN BARU: Kumpul Data Global & Bina Dropdown Faraid ---
+        window.dataAhliFaraid = []; 
+        let htmlPilihan = `<option value="root">Diri Sendiri (Induk)</option>`;
         
-        // AUTO-PEMULIHAN: Jika jadual kosong, bina 'Diri Sendiri' secara automatik
+        // AUTO-PEMULIHAN: Jika jadual kosong
         if (querySnapshot.empty) {
             const namaPenuh = document.getElementById('treeNameDisplay').innerText || "Ketua Keluarga";
             await setDoc(doc(db, "mynasab_nodes", "root_" + penggunaSemasa.uid), {
@@ -173,28 +174,31 @@ window.muatTurunSalasilah = async () => {
                 is_root: true,
                 created_at: new Date()
             });
-            
-            // Panggil fungsi ini semula untuk paparkan data yang baru dibina
             window.muatTurunSalasilah();
             return;
         }
         
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const idKotak = docSnap.id;
+            data.id = docSnap.id; // Simpan ID
             
-            senaraiUntukFaraid.push(data); // Kumpul data untuk Faraid
+            window.dataAhliFaraid.push(data); // Masukkan ke senarai Faraid
             
-            // 1. Dapatkan & Format Data
+            let rel = (data.relationship || '').toLowerCase();
+            
+            // Masukkan Pasangan, Ibubapa, dan Mertua ke dalam Dropdown
+            if(rel === 'isteri' || rel === 'suami' || rel === 'ayah' || rel === 'ibu' || rel.includes('mertua')) {
+                htmlPilihan += `<option value="${data.id}">${data.name} (${data.relationship})</option>`;
+            }
+            
+            // --- BINA JADUAL (KOD SEDIA ADA) ---
             let nama = data.name || "Tiada Nama";
             let hubungan = data.relationship || "Belum Ditetapkan";
             let jantina = data.gender === 'L' ? 'Lelaki' : (data.gender === 'P' ? 'Perempuan' : '-');
             let telefon = data.phone || '-';
             
-            // Gabung Bandar & Negeri
             let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
-            // Kira Umur dari Tarikh Lahir
             let paparanUmur = '-';
             if (data.dob) {
                 const tahunLahir = parseInt(data.dob.split('-')[0], 10);
@@ -202,20 +206,16 @@ window.muatTurunSalasilah = async () => {
                 paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
             }
 
-            // Gambar Mini (Avatar)
             let gambarMini = data.photo_url 
                 ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
                 : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #ecf0f1; display: flex; justify-content: center; align-items: center; font-size: 16px; border: 1px solid #bdc3c7;">👤</div>`;
             
-            // 2. Bina Barisan Jadual (TR)
             const tr = document.createElement('tr');
-            
-            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
+            let butangTindakan = `<a onclick="window.bukaModalEdit('${data.id}')" class="action-link">✏️ Edit</a>`;
             if (!data.is_root) { 
-                butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c; margin-left: 10px;">🗑️ Padam</a>`;
+                butangTindakan += `<a onclick="padamAhli('${data.id}')" class="action-link" style="color: #e74c3c; margin-left: 10px;">🗑️ Padam</a>`;
             }
 
-            // 3. Masukkan 7 Lajur (Kolum) ke dalam HTML
             tr.innerHTML = `
                 <td>
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -230,11 +230,18 @@ window.muatTurunSalasilah = async () => {
                 <td style="color: #576574; font-size: 13px;">${lokasi}</td>
                 <td style="white-space: nowrap;">${butangTindakan}</td>
             `;
-            tbody.appendChild(tr);
+            if(tbody) tbody.appendChild(tr);
         });
         
-        // PANGGIL ENJIN FARAID SELEPAS JADUAL SELESAI DIBINA
-        if (window.kiraFaraidAuto) window.kiraFaraidAuto(senaraiUntukFaraid);
+        // --- KEMAS KINI DROPDOWN & PANGGIL ENJIN FARAID ---
+        const dropdownFaraid = document.getElementById('pilihanMatiFaraid');
+        if(dropdownFaraid) {
+            let nilaiSemasa = dropdownFaraid.value; 
+            dropdownFaraid.innerHTML = htmlPilihan;
+            if(htmlPilihan.includes(`value="${nilaiSemasa}"`)) dropdownFaraid.value = nilaiSemasa; 
+        }
+        
+        if(window.jalankanFaraid) window.jalankanFaraid();
         
     } catch (error) { console.error("Gagal memuat turun senarai:", error); }
 };
@@ -1063,6 +1070,71 @@ document.addEventListener('wheel', (e) => {
     e.preventDefault();
     terapZoom(zoomSemasa * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
 }, { passive: false });
+
+
+// ==========================================
+// 11.5 ENJIN PENUKARAN IDENTITI (PIVOT KELUARGA)
+// ==========================================
+window.jalankanFaraid = () => {
+    if (!window.dataAhliFaraid || window.dataAhliFaraid.length === 0) return;
+    
+    let targetId = document.getElementById('pilihanMatiFaraid').value;
+    let docsData = window.dataAhliFaraid;
+    let mappedData = []; // Data yang telah dialih bahasa
+    
+    // Jika Diri Sendiri dipilih, hantar data asal terus ke kalkulator
+    if (targetId === 'root' || targetId === '') {
+        window.kiraFaraidAuto(docsData);
+        return;
+    } 
+    
+    let target = docsData.find(d => d.id === targetId);
+    if (!target) return;
+    
+    let targetRel = (target.relationship || '').toLowerCase();
+    
+    docsData.forEach(d => {
+        let dRel = (d.relationship || '').toLowerCase();
+        
+        if (d.id === targetId) {
+            // Mangsa / Si Mati yang dipilih dijadikan Induk
+            mappedData.push({ ...d, is_root: true, relationship: 'Diri Sendiri' });
+        } else {
+            let newRel = '';
+            
+            // --- JIKA SI MATI ADALAH PASANGAN (ISTERI / SUAMI) ---
+            if (targetRel === 'isteri' || targetRel === 'suami') {
+                if (d.is_root) newRel = targetRel === 'isteri' ? 'Suami' : 'Isteri';
+                else if (dRel === 'anak' && d.ref_id === targetId) newRel = 'Anak'; // Hanya anak dari pasangan ini
+                else if (dRel.includes('mertua')) newRel = dRel.includes('bapa') ? 'Bapa' : 'Ibu'; // Mertua jadi Ibubapa
+            }
+            // --- JIKA SI MATI ADALAH IBU ATAU BAPA ---
+            else if (targetRel === 'ayah' || targetRel === 'ibu') {
+                if (d.is_root) newRel = 'Anak'; // Diri Sendiri jadi Anak
+                else if (targetRel === 'ayah' && dRel === 'ibu') newRel = 'Isteri';
+                else if (targetRel === 'ibu' && dRel === 'ayah') newRel = 'Suami';
+                else if (dRel === 'datuk') newRel = 'Bapa';
+                else if (dRel === 'nenek') newRel = 'Ibu';
+                else if (dRel.includes('adik') || dRel.includes('abang') || dRel.includes('kakak')) newRel = 'Anak'; // Adik beradik bos adalah Anak kepada ibu bapa bos
+            }
+            // --- JIKA SI MATI ADALAH MERTUA ---
+            else if (targetRel.includes('mertua')) {
+                if (dRel === 'isteri' || dRel === 'suami') newRel = 'Anak'; // Pasangan bos adalah Anak kepada mertua
+                else if (targetRel === 'bapa mertua' && dRel === 'ibu mertua') newRel = 'Isteri';
+                else if (targetRel === 'ibu mertua' && dRel === 'bapa mertua') newRel = 'Suami';
+            }
+            
+            // Jika hubungan baru berjaya dikenal pasti, masukkan ke senarai
+            if (newRel !== '') {
+                mappedData.push({ ...d, is_root: false, relationship: newRel });
+            }
+        }
+    });
+    
+    // Hantar data yang telah "diterjemah" ke Enjin Faraid Pintar
+    window.kiraFaraidAuto(mappedData);
+};
+
 
 // ==========================================
 // 12. ENJIN FARAID PINTAR (OTOMATIS - 100% LOGIK AQMS)
