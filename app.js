@@ -175,7 +175,7 @@ window.muatTurunSalasilah = async () => {
         }
 
         const tbody = document.getElementById('senaraiAhliTbody');
-        tbody.innerHTML = ''; 
+       
         
         let senaraiUntukFaraid = []; // Tambahan untuk Faraid
 
