@@ -1073,14 +1073,14 @@ document.addEventListener('wheel', (e) => {
 
 
 // ==========================================
-// 11.5 ENJIN PENUKARAN IDENTITI (PIVOT KELUARGA)
+// 11.5 ENJIN PENUKARAN IDENTITI (PIVOT KELUARGA) - DIBETULKAN
 // ==========================================
 window.jalankanFaraid = () => {
     if (!window.dataAhliFaraid || window.dataAhliFaraid.length === 0) return;
     
     let targetId = document.getElementById('pilihanMatiFaraid').value;
     let docsData = window.dataAhliFaraid;
-    let mappedData = []; // Data yang telah dialih bahasa
+    let mappedData = []; 
     
     // Jika Diri Sendiri dipilih, hantar data asal terus ke kalkulator
     if (targetId === 'root' || targetId === '') {
@@ -1105,8 +1105,9 @@ window.jalankanFaraid = () => {
             // --- JIKA SI MATI ADALAH PASANGAN (ISTERI / SUAMI) ---
             if (targetRel === 'isteri' || targetRel === 'suami') {
                 if (d.is_root) newRel = targetRel === 'isteri' ? 'Suami' : 'Isteri';
-                else if (dRel === 'anak' && d.ref_id === targetId) newRel = 'Anak'; // Hanya anak dari pasangan ini
-                else if (dRel.includes('mertua')) newRel = dRel.includes('bapa') ? 'Bapa' : 'Ibu'; // Mertua jadi Ibubapa
+                // FIX: Semua Anak, Cucu, Cicit kepada Diri Sendiri juga dianggap keturunan kepada Pasangan
+                else if (dRel === 'anak' || dRel === 'cucu' || dRel === 'cicit') newRel = dRel === 'anak' ? 'Anak' : (dRel === 'cucu' ? 'Cucu' : 'Cicit'); 
+                else if (dRel.includes('mertua')) newRel = dRel.includes('bapa') ? 'Bapa' : 'Ibu'; // Mertua bos adalah ibubapa pasangan
             }
             // --- JIKA SI MATI ADALAH IBU ATAU BAPA ---
             else if (targetRel === 'ayah' || targetRel === 'ibu') {
@@ -1134,7 +1135,6 @@ window.jalankanFaraid = () => {
     // Hantar data yang telah "diterjemah" ke Enjin Faraid Pintar
     window.kiraFaraidAuto(mappedData);
 };
-
 
 // ==========================================
 // 12. ENJIN FARAID PINTAR (OTOMATIS - 100% LOGIK AQMS)
