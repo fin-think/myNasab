@@ -1037,15 +1037,16 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 // ==========================================
-// 12. ENJIN FARAID PINTAR (OTOMATIS)
+// 12. ENJIN FARAID PINTAR (OTOMATIS - 100% LOGIK AQMS)
 // ==========================================
 window.kiraFaraidAuto = (docs) => {
     let isteriCount = 0, suamiCount = 0;
     let bapa = 0, ibu = 0, datuk = 0, nenek = 0;
     let al = 0, ap = 0;
+    let adikLelaki = 0, adikPerempuan = 0; // Tambahan untuk Waris Kedua
     let jantinaInduk = 'L'; // Asumsi Default Lelaki
 
-    // 1. Imbas seluruh senarai keluarga
+    // 1. Imbas seluruh senarai keluarga dari database
     docs.forEach(d => {
         let rel = (d.relationship || '').toLowerCase();
         let gen = d.gender;
@@ -1061,18 +1062,23 @@ window.kiraFaraidAuto = (docs) => {
             if (gen === 'L') al++;
             else if (gen === 'P') ap++;
         }
+        else if (rel.includes('adik') || rel.includes('abang') || rel.includes('kakak')) {
+            if (gen === 'L') adikLelaki++;
+            else if (gen === 'P') adikPerempuan++;
+        }
     });
 
-    // 2. Halang logik yang bercanggah dengan jantina
+    // Halang logik bercanggah dengan jantina Diri Sendiri
     if (jantinaInduk === 'P') isteriCount = 0;
     if (jantinaInduk === 'L') suamiCount = 0;
 
     const hasChild = (al + ap) > 0;
+    const hasSiblings = (adikLelaki + adikPerempuan) >= 2;
     let results = [];
     let BASE = 24;
     let sumFardu = 0;
 
-    // 3. PENGIRAAN FARDU
+    // 2. PENGIRAAN FARDU
     if (isteriCount > 0) {
         results.push({ name: isteriCount > 1 ? `${isteriCount} Isteri` : 'Isteri', share: hasChild ? 3 : 6, type: 'Fardu', color: '#1abc9c' });
     }
@@ -1080,20 +1086,21 @@ window.kiraFaraidAuto = (docs) => {
         results.push({ name: 'Suami', share: hasChild ? 6 : 12, type: 'Fardu', color: '#1abc9c' });
     }
     if (ibu > 0) {
-        results.push({ name: 'Ibu', share: (hasChild) ? 4 : 8, type: 'Fardu', color: '#3498db' });
+        let ibuShare = (hasChild || hasSiblings) ? 4 : 8; // 1/6 atau 1/3
+        results.push({ name: 'Ibu', share: ibuShare, type: 'Fardu', color: '#3498db' });
     } else if (nenek > 0) {
         results.push({ name: 'Nenek', share: 4, type: 'Waris Ganti (Ibu)', color: '#2980b9' });
     }
     if (bapa > 0) {
-        results.push({ name: 'Bapa', share: 4, type: 'Fardu', color: '#2980b9' });
+        results.push({ name: 'Bapa', share: 4, type: 'Fardu', color: '#2563eb' });
     } else if (datuk > 0) {
-        results.push({ name: 'Datuk', share: 4, type: 'Waris Ganti (Bapa)', color: '#8e44ad' });
+        results.push({ name: 'Datuk', share: 4, type: 'Waris Ganti (Bapa)', color: '#818cf8' });
     }
 
     sumFardu = results.reduce((acc, r) => acc + r.share, 0);
     let remaining = BASE - sumFardu;
 
-    // AUL (Penyebut meningkat jika jumlah fardu melebihi)
+    // AUL (Penyebut meningkat jika jumlah fardu melebihi asalnya)
     if (remaining < 0) {
         results.forEach(r => { r.base = sumFardu; });
         remaining = 0;
@@ -1102,19 +1109,19 @@ window.kiraFaraidAuto = (docs) => {
         results.forEach(r => { r.base = BASE; });
     }
 
-    // 4. PENGIRAAN ASABAH (ANAK)
+    // 3. PENGIRAAN ASABAH (ANAK-ANAK)
     if (al > 0 || ap > 0) {
         if (al === 0) {
             // Hanya anak perempuan (Fardu)
             let share = ap === 1 ? 12 : 16;
             if (remaining < share) {
                 sumFardu += share;
-                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: sumFardu, type: 'Fardu', color: '#e056fd' });
+                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: sumFardu, type: 'Fardu', color: '#ec4899' });
                 results.forEach(r => r.base = sumFardu);
                 BASE = sumFardu;
                 remaining = 0;
             } else {
-                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: BASE, type: 'Fardu', color: '#e056fd' });
+                results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: share, base: BASE, type: 'Fardu', color: '#ec4899' });
                 remaining -= share;
             }
         } else {
@@ -1123,28 +1130,38 @@ window.kiraFaraidAuto = (docs) => {
             if (remaining > 0 && totalParts > 0) {
                 let shareAL = (remaining * (al * 2)) / totalParts;
                 let shareAP = (remaining * ap) / totalParts;
-                if (al > 0) results.push({ name: al > 1 ? `${al} Anak Lelaki` : 'Anak Lelaki', share: shareAL, base: BASE, type: 'Asabah', color: '#9b59b6' });
-                if (ap > 0) results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: shareAP, base: BASE, type: 'Asabah', color: '#e056fd' });
+                if (al > 0) results.push({ name: al > 1 ? `${al} Anak Lelaki` : 'Anak Lelaki', share: shareAL, base: BASE, type: 'Asabah', color: '#6366f1' });
+                if (ap > 0) results.push({ name: ap > 1 ? `${ap} Anak Perempuan` : 'Anak Perempuan', share: shareAP, base: BASE, type: 'Asabah', color: '#ec4899' });
                 remaining = 0;
             }
         }
     }
 
-    // 5. BAKI (BAITULMAL / ASABAH BAPA)
+    // 4. BAKI (ASABAH BAPA / ADIK BERADIK / BAITULMAL)
     if (remaining > 0) {
         if (bapa > 0) {
             let b = results.find(r => r.name === 'Bapa');
             b.share += remaining;
             b.type = 'Fardu + Asabah';
             remaining = 0;
+            
         } else if (datuk > 0) {
             let d = results.find(r => r.name === 'Datuk');
             d.share += remaining;
             d.type = 'Fardu + Asabah';
             remaining = 0;
+            
+        } else if (adikLelaki > 0 || adikPerempuan > 0) {
+            // Adik beradik ambil asabah jika tiada anak lelaki & tiada bapa
+            let totalParts = (adikLelaki * 2) + adikPerempuan;
+            if (totalParts > 0) {
+                if (adikLelaki > 0) results.push({ name: adikLelaki > 1 ? `${adikLelaki} Adik Beradik Lelaki` : 'Adik Beradik Lelaki', share: (remaining * (adikLelaki * 2)) / totalParts, base: BASE, type: 'Asabah (Waris Kedua)', color: '#9333ea' });
+                if (adikPerempuan > 0) results.push({ name: adikPerempuan > 1 ? `${adikPerempuan} Adik Beradik Perempuan` : 'Adik Beradik Perempuan', share: (remaining * adikPerempuan) / totalParts, base: BASE, type: 'Asabah (Waris Kedua)', color: '#c084fc' });
+                remaining = 0;
+            }
         } else {
-            // Jika tiada waris lelaki yang memotong baki
-            results.push({ name: 'Baitulmal / Baki', share: remaining, base: BASE, type: 'Baki Belum Diagih', color: '#95a5a6' });
+            // LOGIK BAITULMAL: Jika tak ada langsung waris lelaki untuk habiskan baki
+            results.push({ name: 'Baitulmal / Baki', share: remaining, base: BASE, type: 'Baki Belum Diagih', color: '#94a3b8' });
             remaining = 0;
         }
     }
