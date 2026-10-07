@@ -183,23 +183,52 @@ window.muatTurunSalasilah = async () => {
             const data = docSnap.data();
             const idKotak = docSnap.id;
             
-            senaraiUntukFaraid.push(data); // Kumpul data untuk dikira oleh Faraid
+            senaraiUntukFaraid.push(data); // Kumpul data untuk Faraid
             
+            // 1. Dapatkan & Format Data
             let nama = data.name || "Tiada Nama";
             let hubungan = data.relationship || "Belum Ditetapkan";
+            let jantina = data.gender === 'L' ? 'Lelaki' : (data.gender === 'P' ? 'Perempuan' : '-');
+            let telefon = data.phone || '-';
             
-            const tr = document.createElement('tr');
+            // Gabung Bandar & Negeri
+            let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
-            // Susun butang tindakan
-            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
-            if (!data.is_root) { // Halang Diri Sendiri dari dipadam
-                butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c;">🗑️ Padam</a>`;
+            // Kira Umur dari Tarikh Lahir
+            let paparanUmur = '-';
+            if (data.dob) {
+                const tahunLahir = parseInt(data.dob.split('-')[0], 10);
+                const umur = 2026 - tahunLahir;
+                paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
             }
 
+            // Gambar Mini (Avatar)
+            let gambarMini = data.photo_url 
+                ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
+                : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #ecf0f1; display: flex; justify-content: center; align-items: center; font-size: 16px; border: 1px solid #bdc3c7;">👤</div>`;
+            
+            // 2. Bina Barisan Jadual (TR)
+            const tr = document.createElement('tr');
+            
+            let butangTindakan = `<a onclick="window.bukaModalEdit('${idKotak}')" class="action-link">✏️ Edit</a>`;
+            if (!data.is_root) { 
+                butangTindakan += `<a onclick="padamAhli('${idKotak}')" class="action-link" style="color: #e74c3c; margin-left: 10px;">🗑️ Padam</a>`;
+            }
+
+            // 3. Masukkan 7 Lajur (Kolum) ke dalam HTML
             tr.innerHTML = `
-                <td><strong>${nama}</strong></td>
-                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">${hubungan}</span></td>
-                <td>${butangTindakan}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        ${gambarMini}
+                        <strong style="color: #2c3e50;">${nama}</strong>
+                    </div>
+                </td>
+                <td><span style="background: #e8f8f5; color: #117a65; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap;">${hubungan}</span></td>
+                <td style="color: #576574;">${jantina}</td>
+                <td style="color: #576574; font-size: 13px;">${paparanUmur}</td>
+                <td style="color: #576574; font-size: 13px;">${telefon}</td>
+                <td style="color: #576574; font-size: 13px;">${lokasi}</td>
+                <td style="white-space: nowrap;">${butangTindakan}</td>
             `;
             tbody.appendChild(tr);
         });
