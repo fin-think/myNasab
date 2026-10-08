@@ -297,7 +297,15 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
         else if (hubungan === "Bapa Mertua" || hubungan === "Ibu Mertua") {
             kosAhli = 5;
         }
-        else if (hubLower.includes("cucu") || hubLower.includes("cicit") || hubLower.includes("piut") || hubLower.includes("cece") || hubLower.includes("oneng") || hubLower.includes("menantu")) {
+        // KEMAS KINI: Masukkan sekali Abang, Kakak, Adik, Ipar & Anak Saudara untuk caj 1 Kredit
+        else if (
+            hubLower.includes("cucu") || hubLower.includes("cicit") || 
+            hubLower.includes("piut") || hubLower.includes("cece") || 
+            hubLower.includes("oneng") || hubLower.includes("menantu") ||
+            hubLower.includes("abang") || hubLower.includes("kakak") || 
+            hubLower.includes("adik") || hubLower.includes("ipar") || 
+            hubLower.includes("anak saudara")
+        ) {
             kosAhli = 1;
         }
 
