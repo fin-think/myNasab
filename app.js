@@ -1027,22 +1027,63 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, true)}${ibu ? binaTiangAtasan(ibu, sisa, false) : ''}</div>`;
         };
 
-        // --- Keturunan ke bawah (dengan pasangan anak/cucu) ---
-        const renderKeturunan = (levels, menantu = []) => {
-            const idx = levels.findIndex(a => a.length > 0);
-            if (idx === -1) return '';
-            const data = levels[idx].sort((a, b) => !a.dob ? 1 : !b.dob ? -1 : new Date(a.dob) - new Date(b.dob));
-            const sisa = levels.slice(idx + 1);
-            const adaBawah = sisa.some(a => a.length > 0);
-            let s = '<ul>';
-            data.forEach((n, i) => {
-                const bawah = (i === Math.floor(data.length / 2)) && adaBawah;
-                const psg = menantu.filter(m => m.ref_id === n.id);
-                const orang = [n, ...psg].sort((a, b) => (b.gender === 'L') - (a.gender === 'L'));
-                const kelas = 'couple-wrapper' + (psg.length ? ' has-spouse' : '') + (bawah ? ' has-children' : '');
-                s += `<li><div class="${kelas}">${orang.map(p => `<div class="pillar">${binaKotak(p)}</div>`).join('')}</div>${bawah ? renderKeturunan(sisa, menantu) : ''}</li>`;
+        // --- Keturunan ke bawah (dengan pasangan anak/cucu) - DIKEMASKINI DENGAN ref_id ---
+        const renderKeturunan = (dataSemasa, bakiLevel, menantu) => {
+            // PENGENDALIAN PANGGILAN PERTAMA
+            if (Array.isArray(dataSemasa[0])) {
+                let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
+                if (firstLevelIndex === -1) return '';
+                bakiLevel = dataSemasa.slice(firstLevelIndex + 1);
+                dataSemasa = dataSemasa[firstLevelIndex];
+            }
+
+            if (!dataSemasa || dataSemasa.length === 0) return '';
+            
+            // Susun dari paling tua ke muda (kiri ke kanan)
+            dataSemasa.sort((a, b) => {
+                if (!a.dob) return 1;
+                if (!b.dob) return -1;
+                return new Date(a.dob) - new Date(b.dob);
             });
-            return s + '</ul>';
+            
+            let str = `<ul>`;
+            
+            dataSemasa.forEach((node, index) => {
+                let pasanganNodeIni = menantu.filter(m => m.ref_id === node.id);
+                let anakKepadaNode = [];
+                let bakiGenerasiSeterusnya = [];
+                
+                if (bakiLevel && bakiLevel.length > 0) {
+                    let nextLevelAll = bakiLevel[0];
+                    anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
+                    
+                    // FAILSAFE
+                    if (index === 0) {
+                        let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
+                        anakKepadaNode = anakKepadaNode.concat(dataYatim);
+                    }
+                    bakiGenerasiSeterusnya = bakiLevel.slice(1);
+                }
+
+                let adaKeturunanBawah = anakKepadaNode.length > 0;
+                let classW = "couple-wrapper" + (adaKeturunanBawah ? " has-children" : "");
+                if (pasanganNodeIni.length > 0) classW += " has-spouse";
+                
+                let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+                
+                let htmlKumpulan = '';
+                gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p)}</div>`); // Binaan kotak asal Keluarga Besar
+                
+                str += `<li>`;
+                str += `<div class="${classW}">${htmlKumpulan}</div>`;
+                if (adaKeturunanBawah) {
+                    str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya, menantu);
+                }
+                str += `</li>`;
+            });
+            
+            str += `</ul>`;
+            return str;
         };
 
         // --- Satu isi rumah: pasangan sebaris + anak di bawah ---
@@ -1052,7 +1093,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             let s = `<div class="${kelas}">`;
             orang.forEach(p => { s += `<div class="pillar">${binaKotak(p, bolehSembunyi && p.is_root)}</div>`; });
             s += '</div>';
-            if (adaAnak) s += renderKeturunan(k.turun.map(a => [...a]), k.menantu);
+            if (adaAnak) s += renderKeturunan(k.turun.map(a => [...a]), [], k.menantu); // Panggil renderKeturunan yang dah dibetulkan
             return s;
         };
 
@@ -1072,9 +1113,9 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
 
             let isi;
             if (ibuBapa.length) {
-                isi = `<ul><li>${binaIbuBapaAtas(ibuBapa, sisa)}<ul>${entri.map(e => `<li>${e.html}</li>`).join('')}</ul></li></ul>`;
+                isi = `<ul><li>${binaIbuBapaAtas(ibuBapa, sisa)}<ul>${entri.map(e => `<li>\${e.html}</li>`).join('')}</ul></li></ul>`;
             } else {
-                isi = `<div style="display:flex; gap:60px; align-items:flex-start;">${entri.map(e => `<ul><li>${e.html}</li></ul>`).join('')}</div>`;
+                isi = `<div style="display:flex; gap:60px; align-items:flex-start;">${entri.map(e => `<ul><li>\${e.html}</li></ul>`).join('')}</div>`;
             }
             return { ada: ibuBapa.length > 0 || entri.length > 1, judul, isi };
         };
@@ -1101,9 +1142,9 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
 
         const tunjukJudul = sisi.length > 1;
         const bar = hiddenList.length
-            ? `<div class="bar-sembunyi">Disembunyikan: ${hiddenList.map(h => `${esc(h.nama)} <button onclick="window.paparAkaun('${esc(h.uid)}')">Papar</button>`).join(' ')}</div>` : '';
+            ? `<div class="bar-sembunyi">Disembunyikan: ${hiddenList.map(h => `\${esc(h.nama)} <button onclick="window.paparAkaun('\${esc(h.uid)}')">Papar</button>`).join(' ')}</div>` : '';
         ruang.innerHTML = `<div class="tree pokok-besar">${sisi.map(s =>
-            `<div class="sisi-pokok">${tunjukJudul ? `<h3 class="judul-belah">${esc(s.judul)}</h3>` : ''}${s.isi}</div>`).join('')}</div>${bar}`;
+            `<div class="sisi-pokok">\${tunjukJudul ? `<h3 class="judul-belah">${esc(s.judul)}</h3>` : ''}\${s.isi}</div>`).join('')}</div>${bar}`;
         window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
