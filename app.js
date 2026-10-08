@@ -1162,7 +1162,15 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         }
 
         const tunjukJudul = sisi.length > 1;
-        let htmlSisi = sisi.map(s => `<div class="sisi-pokok">${tunjukJudul ? `<h3 class="judul-belah">\${esc(s.judul)}</h3>` : ''}${s.isi}</div>`).join('');
+        let htmlSisi = '';
+        
+        for (let i = 0; i < sisi.length; i++) {
+            let tajuk = '';
+            if (tunjukJudul) {
+                tajuk = '<h3 class="judul-belah">' + esc(sisi[i].judul) + '</h3>';
+            }
+            htmlSisi += '<div class="sisi-pokok">' + tajuk + sisi[i].isi + '</div>';
+        }
         
         let htmlBar = '';
         if (hiddenList.length > 0) {
