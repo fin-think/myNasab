@@ -306,8 +306,13 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             return;
         }
 
-       // Had 2 ibu bapa — TIDAK terpakai untuk Menantu, Pasangan Cucu & Keturunan Bawah
-        const hubunganDikecualikan = ["Menantu", "Pasangan Cucu", "Cucu", "Cicit", "Piut / Cece", "Oneng-oneng"];
+      // Had 2 ibu bapa — TIDAK terpakai untuk keturunan bawah dan cabang sisi!
+        const hubunganDikecualikan = [
+            "Menantu", "Pasangan Cucu", 
+            "Cucu", "Cicit", "Piut / Cece", "Oneng-oneng", 
+            "Ipar", "Anak Saudara", "Cucu Saudara" // <-- Tambahan kat sini
+        ];
+        
         const kecualikanHad = hubunganDikecualikan.includes(hubungan);
         
         if (rujukanId && !kecualikanHad) {
@@ -756,11 +761,14 @@ const RUJUKAN = {
     "Cakawari": ["Buyut"], "Cilawagi": ["Cakawari"],
     "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"],
     "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"],
-    // --- TAMBAHAN KETURUNAN BAWAH ---
     "Cucu": ["Anak"], 
     "Cicit": ["Cucu"], 
     "Piut / Cece": ["Cicit"], 
-    "Oneng-oneng": ["Piut / Cece"] 
+    "Oneng-oneng": ["Piut / Cece"],
+    // 🔥 TAMBAHAN BARU UNTUK CABANG ADIK-BERADIK (MANUAL)
+    "Ipar": ["Abang", "Kakak", "Adik", "Adik-beradik"],
+    "Anak Saudara": ["Abang", "Kakak", "Adik", "Adik-beradik"],
+    "Cucu Saudara": ["Anak Saudara"]
 };
 
 window.siapkanRujukan = async (hubungan) => {
@@ -769,13 +777,14 @@ window.siapkanRujukan = async (hubungan) => {
     const labelRujukan = kumpulan.querySelector('label');
     const sasaran = RUJUKAN[hubungan];
 
+    // Jika tambah Abang/Kakak/Adik, borang rujukan disembunyikan (mereka berbaris automatik dgn Diri Sendiri)
     if (!sasaran || !penggunaSemasa) { kumpulan.classList.add('hidden'); sel.innerHTML = ''; return; }
 
-    // Ubah label soalan mengikut jenis hubungan
-    if (hubungan === "Menantu" || hubungan === "Pasangan Cucu") {
-        labelRujukan.innerText = `Suami/Isteri kepada ${sasaran[0]} yang mana?`;
-    } else if (hubungan === "Cucu" || hubungan === "Cicit" || hubungan === "Piut / Cece" || hubungan === "Oneng-oneng") {
-        labelRujukan.innerText = `Anak kepada ${sasaran[0]} yang mana?`;
+    // Ubah label soalan mengikut jenis hubungan supaya lebih tepat
+    if (["Menantu", "Pasangan Cucu", "Ipar"].includes(hubungan)) {
+        labelRujukan.innerText = `Suami/Isteri kepada siapa?`;
+    } else if (["Cucu", "Cicit", "Piut / Cece", "Oneng-oneng", "Anak Saudara", "Cucu Saudara"].includes(hubungan)) {
+        labelRujukan.innerText = `Anak kepada siapa?`;
     } else {
         labelRujukan.innerText = `Ibu/bapa kepada siapa?`;
     }
@@ -783,10 +792,11 @@ window.siapkanRujukan = async (hubungan) => {
     const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
     const pilihan = snap.docs.filter(s => sasaran.includes(s.data().relationship));
     
-    // Guna fungsi esc() seperti kod keselamatan asal bos
+    let labelPilihan = sasaran.length > 2 ? "Adik-beradik" : sasaran.join('/');
+
     sel.innerHTML = pilihan.length
         ? `<option value="">-- Sila Pilih --</option>` + pilihan.map(s => `<option value="${esc(s.id)}">${esc(s.data().name)} (${esc(s.data().relationship)})</option>`).join('')
-        : `<option value="">-- Tambah ${esc(sasaran[0])} dahulu --</option>`;
+        : `<option value="">-- Tambah ${labelPilihan} dahulu --</option>`;
         
     kumpulan.classList.remove('hidden');
 };
