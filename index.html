@@ -371,6 +371,16 @@
                             <option value="Piut / Cece">Piut / Cece - Tolak 1 Kredit</option>
                             <option value="Oneng-oneng">Oneng-oneng - Tolak 1 Kredit</option>
                         </optgroup>
+
+<!-- ... senarai keturunan atas & bawah sedia ada ... -->
+    <option value="Abang">Abang - Tolak 1 Kredit</option>
+    <option value="Kakak">Kakak - Tolak 1 Kredit</option>
+    <option value="Adik">Adik - Tolak 1 Kredit</option>
+    <option value="Ipar">Ipar - Tolak 1 Kredit</option>
+    <option value="Anak Saudara">Anak Saudara - Tolak 1 Kredit</option>
+    <option value="Cucu Saudara">Cucu Saudara - Tolak 1 Kredit</option>
+</select>
+                        
                     </select>
                 </div>
                 
@@ -741,10 +751,15 @@ document.getElementById('authForm').addEventListener('submit', function (e) {
     }
 });
 
-// Auto-pilih jantina & urus dropdown rujukan menggunakan fungsi berpusat di app.js
+// Auto-pilih jantina & urus dropdown rujukan
         document.getElementById('tambahHubungan').addEventListener('change', function() {
             const val = this.value;
-            const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+            // Kemas kini: Masukkan Abang (L) dan Kakak (P)
+            const peta = { 
+                "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Abang":"L",
+                "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P", "Kakak":"P" 
+            };
+            
             if(peta[val]) document.getElementById('tambahJantina').value = peta[val];
 
             // Serahkan logik membina dropdown rujukan sepenuhnya kepada app.js
