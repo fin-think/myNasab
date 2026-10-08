@@ -306,12 +306,17 @@ window.tambahAhliBaru = async (nama, hubungan, jantina, dob, telefon, bandar, ne
             return;
         }
 
-        // Had 2 ibu bapa — TIDAK terpakai untuk Menantu / Pasangan Cucu
-        const adalahPasanganKeturunan = (hubungan === "Menantu" || hubungan === "Pasangan Cucu");
-        if (rujukanId && !adalahPasanganKeturunan) {
+       // Had 2 ibu bapa — TIDAK terpakai untuk Menantu, Pasangan Cucu & Keturunan Bawah
+        const hubunganDikecualikan = ["Menantu", "Pasangan Cucu", "Cucu", "Cicit", "Piut / Cece", "Oneng-oneng"];
+        const kecualikanHad = hubunganDikecualikan.includes(hubungan);
+        
+        if (rujukanId && !kecualikanHad) {
             const qSama = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid), where("ref_id", "==", rujukanId));
             const snapSama = await getDocs(qSama);
-            if (snapSama.size >= 2) { alert("Orang ini sudah ada 2 ibu bapa dalam salasilah."); return; }
+            if (snapSama.size >= 2) { 
+                alert("Orang ini sudah ada 2 ibu bapa dalam salasilah."); 
+                return; 
+            }
         }
 
         const kosGambar = (failGambar && failGambar.size > 0) ? 1 : 0;
