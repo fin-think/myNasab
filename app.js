@@ -567,45 +567,74 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        const renderKeturunan = (levels) => {
-            const firstLevelIndex = levels.findIndex(arr => arr.length > 0);
-            if (firstLevelIndex === -1) return '';
+        // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Ibu/Bapa Sebenar (ref_id)
+        const renderKeturunan = (dataSemasa, bakiLevel) => {
+            // PENGENDALIAN PANGGILAN PERTAMA (Bila ia terima array of arrays)
+            if (Array.isArray(dataSemasa[0])) {
+                let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
+                if (firstLevelIndex === -1) return '';
+                bakiLevel = dataSemasa.slice(firstLevelIndex + 1);
+                dataSemasa = dataSemasa[firstLevelIndex];
+            }
 
-            const levelData = levels[firstLevelIndex];
-
-            levelData.sort((a, b) => {
+            if (!dataSemasa || dataSemasa.length === 0) return '';
+            
+            // Susun dari paling tua ke muda (kiri ke kanan)
+            dataSemasa.sort((a, b) => {
                 if (!a.dob) return 1;
                 if (!b.dob) return -1;
                 return new Date(a.dob) - new Date(b.dob);
             });
-
-            const remainingLevels = levels.slice(firstLevelIndex + 1);
-            const hasLower = remainingLevels.some(arr => arr.length > 0);
-
+            
             let str = `<ul>`;
-            levelData.forEach((anak, index) => {
-                const showLowerHere = (index === Math.floor(levelData.length / 2)) && hasLower;
+            
+            dataSemasa.forEach((node, index) => {
+                // Cari pasangan (Menantu/Pasangan Cucu) yang dipautkan pada node ini
+                let pasanganNodeIni = menantuKeturunan.filter(m => m.ref_id === node.id);
+                
+                // Cari anak kepada node ini dari generasi seterusnya
+                let anakKepadaNode = [];
+                let bakiGenerasiSeterusnya = [];
+                
+                if (bakiLevel && bakiLevel.length > 0) {
+                    let nextLevelAll = bakiLevel[0];
+                    
+                    // Tapis keturunan yang memang daftar di bawah ID node ini
+                    anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
+                    
+                    // FAILSAFE: Jika ini data lama yang tiada rujukan ref_id, kita letak bawah anak pertama
+                    if (index === 0) {
+                        let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
+                        anakKepadaNode = anakKepadaNode.concat(dataYatim);
+                    }
+                    
+                    bakiGenerasiSeterusnya = bakiLevel.slice(1);
+                }
 
-                const pasanganAnakIni = menantuKeturunan.filter(m => m.ref_id === anak.id);
-
-                let classW = "couple-wrapper" + (showLowerHere ? " has-children" : "");
-                if (pasanganAnakIni.length > 0) classW += " has-spouse";
-
-                // Lelaki kiri, perempuan kanan
-                const gabung = [anak, ...pasanganAnakIni].sort((a, b) => (b.gender === 'L') - (a.gender === 'L'));
-
+                let adaKeturunanBawah = anakKepadaNode.length > 0;
+                let classW = "couple-wrapper" + (adaKeturunanBawah ? " has-children" : "");
+                if (pasanganNodeIni.length > 0) classW += " has-spouse";
+                
+                // Susun Lelaki Kiri, Perempuan Kanan
+                let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+                
                 let htmlKumpulan = '';
                 gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
-
+                
                 str += `<li>`;
                 str += `<div class="${classW}">${htmlKumpulan}</div>`;
-                if (showLowerHere) str += renderKeturunan(remainingLevels);
+                
+                // Jika dia ada anak bawah dia, panggil fungsi ini lagi secara rantaian
+                if (adaKeturunanBawah) {
+                    str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya);
+                }
                 str += `</li>`;
             });
+            
             str += `</ul>`;
             return str;
         };
-
+        
         let htmlLayout = '<div class="tree"><ul><li>';
 
         const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
