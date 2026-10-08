@@ -199,14 +199,17 @@ window.muatTurunSalasilah = async () => {
             
             let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
-            let paparanUmur = '-';
-            if (data.dob) {
+            // Kira Umur (Automatik ikut tahun semasa. Jika tiada DOB = Meninggal Dunia)
+            let paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
+            
+            if (data.dob && data.dob.trim() !== '') {
                 const tahunLahir = parseInt(data.dob.split('-')[0], 10);
-                const umur = 2026 - tahunLahir;
+                const tahunSemasa = new Date().getFullYear(); // Sistem kesan tahun secara automatik (cth: 2026, 2027...)
+                const umur = tahunSemasa - tahunLahir;
                 paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
             }
 
-            let gambarMini = data.photo_url 
+            let gambarMini = data.photo_url
                 ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
                 : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #ecf0f1; display: flex; justify-content: center; align-items: center; font-size: 16px; border: 1px solid #bdc3c7;">👤</div>`;
             
@@ -1147,12 +1150,23 @@ window.kiraFaraidAuto = (docs) => {
     let jantinaInduk = 'L'; // Asumsi Default Lelaki
 
     // 1. Imbas seluruh senarai keluarga dari database
+   // 1. Imbas seluruh senarai keluarga dari database
     docs.forEach(d => {
+        // A: Jika ini adalah si mati (Induk), dapatkan jantinanya. Si mati bukan penerima!
+        if (d.is_root) { 
+            jantinaInduk = d.gender || 'L'; 
+            return; // Berhenti di sini untuk orang ini, teruskan ke orang seterusnya
+        }
+        
+        // B: HALANG WARIS MENINGGAL DUNIA (Jika tiada DOB, anggap mati dan GUGUR Faraid)
+        if (!d.dob || d.dob.trim() === '') {
+            return; // Berhenti di sini, dia takkan dikira dalam isteriCount, bapa, dll
+        }
+
         let rel = (d.relationship || '').toLowerCase();
         let gen = d.gender;
 
-        if (d.is_root) { jantinaInduk = gen || 'L'; }
-        else if (rel === 'isteri') isteriCount++;
+        if (rel === 'isteri') isteriCount++;
         else if (rel === 'suami') suamiCount++;
         else if (rel === 'ayah' || rel === 'bapa') bapa = 1;
         else if (rel === 'ibu') ibu = 1;
