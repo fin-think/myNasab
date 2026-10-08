@@ -894,24 +894,26 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
     if (!penggunaSemasa) return;
     const saya = penggunaSemasa.uid;
     const ruang = document.getElementById('ruangAutoLayout');
+    
     document.getElementById('modalPreview').classList.remove('hidden');
     ruang.innerHTML = '<p>Sedang melukis pokok keluarga besar...</p>';
     document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
     try {
-        // 1. Induk = akaun yang menjemput (kalau saya bukan adik, induk = saya)
+        // 1. Induk = akaun yang menjemput
         const sLinkSaya = await getDoc(doc(db, "mynasab_links", saya));
         if (sLinkSaya.exists() && sLinkSaya.data().status !== 'aktif') {
             ruang.innerHTML = '<p>Pautan keluarga anda masih menunggu kelulusan pengundang.</p>';
             return;
         }
+        
         const indukUid = sLinkSaya.exists() ? sLinkSaya.data().owner_uid : saya;
         const sayaInduk = indukUid === saya;
 
         // 2. Akaun yang dipautkan kepada induk + senarai sembunyi saya
-        const sPautan = await getDocs(query(collection(db, "mynasab_links"),
-            where("owner_uid", "==", indukUid), where("status", "==", "aktif")));
+        const sPautan = await getDocs(query(collection(db, "mynasab_links"), where("owner_uid", "==", indukUid), where("status", "==", "aktif")));
         const pautan = sPautan.docs.map(d => d.data());
+        
         const sUser = await getDoc(doc(db, "mynasab_users", saya));
         const sembunyi = (sUser.exists() && sUser.data().sembunyi) || [];
 
@@ -920,8 +922,12 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             try {
                 const s = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", uid)));
                 return s.docs.map(d => ({ ...d.data(), id: d.id }));
-            } catch (e) { console.warn("Tak dapat baca nod", uid, e.message); return []; }
+            } catch (e) { 
+                console.warn("Tak dapat baca nod", uid, e.message); 
+                return []; 
+            }
         };
+        
         const nodInduk = await ambil(indukUid);
         const akaun = await Promise.all(pautan.map(async p => ({ uid: p.uid, sasaran: p.sasaran_id, nod: await ambil(p.uid) })));
 
@@ -949,7 +955,11 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         };
 
         const k0 = kelompok(nodInduk);
-        if (!k0.diri) { ruang.innerHTML = '<p>Data akaun induk tidak dijumpai.</p>'; return; }
+        if (!k0.diri) { 
+            ruang.innerHTML = '<p>Data akaun induk tidak dijumpai.</p>'; 
+            return; 
+        }
+        
         const indukRootId = k0.diri.id;
         const semuaId = new Set(nodInduk.map(n => n.id));
         const sasaranUid = {};
@@ -978,22 +988,34 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const binaKotak = (a, butangSembunyi = false) => {
             const h = (a.relationship || '').toLowerCase();
             let tema = 'theme-neutral';
+            
             if (a.gender === 'L') tema = 'theme-lelaki';
             else if (a.gender === 'P') tema = 'theme-perempuan';
             else if (/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/.test(h)) tema = 'theme-lelaki';
             else if (/ibu|isteri|nenek/.test(h)) tema = 'theme-perempuan';
-            const avatar = a.photo_url ? `<img src="${esc(a.photo_url)}" style="width:100%;height:100%;object-fit:cover;">` : SVG;
-            const btn = butangSembunyi
-                ? `<button class="btn-sembunyi" title="Sembunyikan keluarga ini" onclick="window.sembunyiAkaun('${esc(a.owner_uid)}')">✕</button>` : '';
-            return `<div class="mh-card ${tema}">${btn}<div class="badge-mini">${esc(label(a))}</div>
-                <div class="mh-avatar">${avatar}</div>
-                <div class="mh-details"><p class="mh-name" title="${esc(a.name)}">${esc(a.name)}</p>
-                <p class="mh-info" style="font-size:10px;">${infoLahir(a)}</p></div></div>`;
+            
+            const avatar = a.photo_url ? `<img src="\${esc(a.photo_url)}" style="width:100%;height:100%;object-fit:cover;">` : SVG;
+            
+            let btn = '';
+            if (butangSembunyi) {
+                btn = `<button class="btn-sembunyi" title="Sembunyikan keluarga ini" onclick="window.sembunyiAkaun('\${esc(a.owner_uid)}')">✕</button>`;
+            }
+            
+            return `
+                <div class="mh-card \${tema}">
+                    \${btn}
+                    <div class="badge-mini">\${esc(label(a))}</div>
+                    <div class="mh-avatar">\${avatar}</div>
+                    <div class="mh-details">
+                        <p class="mh-name" title="${esc(a.name)}">${esc(a.name)}</p>
+                        <p class="mh-info" style="font-size:10px;">\${infoLahir(a)}</p>
+                    </div>
+                </div>
+            `;
         };
 
         // --- Leluhur ke atas ---
-        const lelaki = x => x.gender ? x.gender === 'L'
-            : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
+        const lelaki = x => x.gender ? x.gender === 'L' : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
         const jantinaL = x => x.gender ? x.gender === 'L' : /suami|ayah|bapa/.test((x.relationship || '').toLowerCase());
         const susunKiri = (arr) => [...arr].sort((a, b) => (jantinaL(b) ? 1 : 0) - (jantinaL(a) ? 1 : 0));
 
@@ -1007,15 +1029,26 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const binaTiangAtasan = (ahli, levels = [], utama = true) => {
             let s = '<div class="pillar">';
             const { senarai, sisa } = cariIbuBapa(ahli, levels, utama);
-            if (senarai.length) {
+            
+            if (senarai.length > 0) {
                 const bapa = senarai.find(lelaki) || senarai[0];
                 const ibu = senarai.find(x => x !== bapa);
+                
                 let kelas = 'couple-wrapper ancestor-couple has-children';
                 if (ibu) kelas += ' has-spouse';
-                if (ibu && cariIbuBapa(bapa, sisa, true).senarai.length && cariIbuBapa(ibu, sisa, false).senarai.length) kelas += ' anc-both';
-                s += `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, true)}${ibu ? binaTiangAtasan(ibu, sisa, false) : ''}</div>`;
+                
+                if (ibu && cariIbuBapa(bapa, sisa, true).senarai.length > 0 && cariIbuBapa(ibu, sisa, false).senarai.length > 0) {
+                    kelas += ' anc-both';
+                }
+                
+                let bHtml = binaTiangAtasan(bapa, sisa, true);
+                let iHtml = ibu ? binaTiangAtasan(ibu, sisa, false) : '';
+                
+                s += `<div class="\${kelas}">${bHtml}${iHtml}</div>`;
             }
-            return s + binaKotak(ahli) + '</div>';
+            s += binaKotak(ahli);
+            s += '</div>';
+            return s;
         };
 
         const binaIbuBapaAtas = (senarai, sisa) => {
@@ -1023,13 +1056,19 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
             const ibu = senarai.find(x => x !== bapa);
             const bAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
             const iAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
-            const kelas = 'couple-wrapper main-couple induk-atas has-children' + (ibu ? ' has-spouse' : '') + (bAda && iAda ? ' anc-both' : '');
-            return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, true)}${ibu ? binaTiangAtasan(ibu, sisa, false) : ''}</div>`;
+            
+            let kelas = 'couple-wrapper main-couple induk-atas has-children';
+            if (ibu) kelas += ' has-spouse';
+            if (bAda && iAda) kelas += ' anc-both';
+            
+            let bHtml = binaTiangAtasan(bapa, sisa, true);
+            let iHtml = ibu ? binaTiangAtasan(ibu, sisa, false) : '';
+            
+            return `<div class="\${kelas}">${bHtml}${iHtml}</div>`;
         };
 
         // --- Keturunan ke bawah (dengan pasangan anak/cucu) - DIKEMASKINI DENGAN ref_id ---
         const renderKeturunan = (dataSemasa, bakiLevel, menantu) => {
-            // PENGENDALIAN PANGGILAN PERTAMA
             if (Array.isArray(dataSemasa[0])) {
                 let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
                 if (firstLevelIndex === -1) return '';
@@ -1039,7 +1078,6 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
 
             if (!dataSemasa || dataSemasa.length === 0) return '';
             
-            // Susun dari paling tua ke muda (kiri ke kanan)
             dataSemasa.sort((a, b) => {
                 if (!a.dob) return 1;
                 if (!b.dob) return -1;
@@ -1057,7 +1095,6 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                     let nextLevelAll = bakiLevel[0];
                     anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
                     
-                    // FAILSAFE
                     if (index === 0) {
                         let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
                         anakKepadaNode = anakKepadaNode.concat(dataYatim);
@@ -1072,7 +1109,9 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                 let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
                 
                 let htmlKumpulan = '';
-                gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p)}</div>`); // Binaan kotak asal Keluarga Besar
+                gabung.forEach(p => {
+                    htmlKumpulan += `<div class="pillar">\${binaKotak(p)}</div>`;
+                }); 
                 
                 str += `<li>`;
                 str += `<div class="${classW}">${htmlKumpulan}</div>`;
@@ -1088,12 +1127,22 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
 
         // --- Satu isi rumah: pasangan sebaris + anak di bawah ---
         const binaRumah = (k, orang, bolehSembunyi) => {
-            const adaAnak = k.turun.some(a => a.length);
-            const kelas = 'couple-wrapper main-couple' + (orang.length > 1 ? ' has-spouse' : '') + (adaAnak ? ' has-children' : '');
-            let s = `<div class="${kelas}">`;
-            orang.forEach(p => { s += `<div class="pillar">${binaKotak(p, bolehSembunyi && p.is_root)}</div>`; });
+            const adaAnak = k.turun.some(a => a.length > 0);
+            
+            let kelas = 'couple-wrapper main-couple';
+            if (orang.length > 1) kelas += ' has-spouse';
+            if (adaAnak) kelas += ' has-children';
+            
+            let s = `<div class="\${kelas}">`;
+            orang.forEach(p => { 
+                s += `<div class="pillar">\${binaKotak(p, bolehSembunyi && p.is_root)}</div>`; 
+            });
             s += '</div>';
-            if (adaAnak) s += renderKeturunan(k.turun.map(a => [...a]), [], k.menantu); // Panggil renderKeturunan yang dah dibetulkan
+            
+            if (adaAnak) {
+                let salinanTurun = k.turun.map(a => [...a]);
+                s += renderKeturunan(salinanTurun, [], k.menantu); 
+            }
             return s;
         };
 
@@ -1103,52 +1152,76 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
 
         const binaSisi = (judul, jangkar, ibuBapa, sisa, sasaranId) => {
             const entri = [{ t: tarikh(jangkar.penentu), html: binaRumah(jangkar.k, jangkar.orang, false) }];
+            
             akaun.filter(a => a.sasaran === sasaranId).forEach(a => {
                 const k = kelompok(a.nod);
                 if (!k.diri) return;
-                if (sembunyi.includes(a.uid)) { hiddenList.push({ uid: a.uid, nama: k.diri.name }); return; }
-                entri.push({ t: tarikh(k.diri), html: binaRumah(k, susunKiri([k.diri, ...k.pasangan]), a.uid !== saya) });
+                
+                if (sembunyi.includes(a.uid)) { 
+                    hiddenList.push({ uid: a.uid, nama: k.diri.name }); 
+                    return; 
+                }
+                
+                let susunanOrang = susunKiri([k.diri, ...k.pasangan]);
+                entri.push({ t: tarikh(k.diri), html: binaRumah(k, susunanOrang, a.uid !== saya) });
             });
+            
             entri.sort((x, y) => x.t - y.t);
 
-            let isi;
-            if (ibuBapa.length) {
-                isi = `<ul><li>${binaIbuBapaAtas(ibuBapa, sisa)}<ul>${entri.map(e => `<li>\${e.html}</li>`).join('')}</ul></li></ul>`;
+            let isi = '';
+            if (ibuBapa.length > 0) {
+                let htmlEntri = entri.map(e => `<li>\${e.html}</li>`).join('');
+                isi = `<ul><li>${binaIbuBapaAtas(ibuBapa, sisa)}<ul>${htmlEntri}</ul></li></ul>`;
             } else {
-                isi = `<div style="display:flex; gap:60px; align-items:flex-start;">${entri.map(e => `<ul><li>\${e.html}</li></ul>`).join('')}</div>`;
+                let htmlEntri = entri.map(e => `<ul><li>\${e.html}</li></ul>`).join('');
+                isi = `<div style="display:flex; gap:60px; align-items:flex-start;">\${htmlEntri}</div>`;
             }
-            return { ada: ibuBapa.length > 0 || entri.length > 1, judul, isi };
+            
+            return { ada: (ibuBapa.length > 0 || entri.length > 1), judul: judul, isi: isi };
         };
 
         // --- Susun mengikut pilihan paparan ---
         const sisi = [];
         if (mod === 'saya' || mod === 'semua') {
             const { senarai, sisa } = cariIbuBapa(k0.diri, [k0.ibuBapa, k0.datukNenek, k0.moyang, k0.buyut, k0.cakawari, k0.cilawagi], true);
-            sisi.push(binaSisi('Belah ' + k0.diri.name,
-                { k: k0, orang: susunKiri([k0.diri, ...k0.pasangan]), penentu: k0.diri }, senarai, sisa, indukRootId));
+            let susunanOrangDiri = susunKiri([k0.diri, ...k0.pasangan]);
+            sisi.push(binaSisi('Belah ' + k0.diri.name, { k: k0, orang: susunKiri([k0.diri, ...k0.pasangan]), penentu: k0.diri }, senarai, sisa, indukRootId));
         }
+        
         if (mod === 'pasangan' || mod === 'semua') {
             k0.pasangan.forEach((p, i) => {
                 const { senarai } = cariIbuBapa(p, [k0.mertua], i === 0);
-                const s = binaSisi('Belah ' + p.name,
-                    { k: k0, orang: susunKiri([p, k0.diri]), penentu: p }, senarai, [], p.id);
+                let susunanOrangPsg = susunKiri([p, k0.diri]);
+                const s = binaSisi('Belah ' + p.name, { k: k0, orang: susunanOrangPsg, penentu: p }, senarai, [], p.id);
                 if (s.ada) sisi.push(s);
             });
         }
-        if (!sisi.length) {
+        
+        if (sisi.length === 0) {
             ruang.innerHTML = '<p>Belum ada maklumat belah pasangan. Tambah Bapa/Ibu Mertua atau jemput adik-beradik pasangan.</p>';
             return;
         }
 
         const tunjukJudul = sisi.length > 1;
-        const bar = hiddenList.length
-            ? `<div class="bar-sembunyi">Disembunyikan: ${hiddenList.map(h => `\${esc(h.nama)} <button onclick="window.paparAkaun('\${esc(h.uid)}')">Papar</button>`).join(' ')}</div>` : '';
-        ruang.innerHTML = `<div class="tree pokok-besar">${sisi.map(s =>
-            `<div class="sisi-pokok">\${tunjukJudul ? `<h3 class="judul-belah">${esc(s.judul)}</h3>` : ''}\${s.isi}</div>`).join('')}</div>${bar}`;
+        
+        // --- BINA HTML SECARA TERASING (Elak Ralat Template Literal) ---
+        let htmlSisi = '';
+        sisi.forEach(s => {
+            let tajuk = tunjukJudul ? `<h3 class="judul-belah">\${esc(s.judul)}</h3>` : '';
+            htmlSisi += `<div class="sisi-pokok">${tajuk}${s.isi}</div>`;
+        });
+        
+        let htmlBar = '';
+        if (hiddenList.length > 0) {
+            let senaraiSembunyi = hiddenList.map(h => `\${esc(h.nama)} <button onclick="window.paparAkaun('\${esc(h.uid)}')">Papar</button>`).join(' ');
+            htmlBar = `<div class="bar-sembunyi">Disembunyikan: \${senaraiSembunyi}</div>`;
+        }
+
+        ruang.innerHTML = `<div class="tree pokok-besar">${htmlSisi}</div>${htmlBar}`;
         window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
-        ruang.innerHTML = `<p style="color:red;">Gagal menjana pokok besar: ${esc(error.message)}</p>`;
+        ruang.innerHTML = `<p style="color:red;">Gagal menjana pokok besar: \${esc(error.message)}</p>`;
     }
 };
 
