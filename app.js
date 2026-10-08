@@ -688,13 +688,18 @@ window.cetakSalasilah = () => {
     setTimeout(() => window.print(), 100);
 };
 
-// --- 9. DROPDOWN "IBU/BAPA KEPADA SIAPA" (+ PASANGAN ANAK/CUCU) ---
+// --- 9. DROPDOWN "RUJUKAN IKATAN KELUARGA" ---
 const RUJUKAN = {
     "Datuk": ["Ayah","Ibu"], "Nenek": ["Ayah","Ibu"],
     "Moyang": ["Datuk","Nenek"], "Buyut": ["Moyang"],
     "Cakawari": ["Buyut"], "Cilawagi": ["Cakawari"],
     "Bapa Mertua": ["Isteri","Suami"], "Ibu Mertua": ["Isteri","Suami"],
-    "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"]
+    "Menantu": ["Anak"], "Pasangan Cucu": ["Cucu"],
+    // --- TAMBAHAN KETURUNAN BAWAH ---
+    "Cucu": ["Anak"], 
+    "Cicit": ["Cucu"], 
+    "Piut / Cece": ["Cicit"], 
+    "Oneng-oneng": ["Piut / Cece"] 
 };
 
 window.siapkanRujukan = async (hubungan) => {
@@ -705,17 +710,23 @@ window.siapkanRujukan = async (hubungan) => {
 
     if (!sasaran || !penggunaSemasa) { kumpulan.classList.add('hidden'); sel.innerHTML = ''; return; }
 
+    // Ubah label soalan mengikut jenis hubungan
     if (hubungan === "Menantu" || hubungan === "Pasangan Cucu") {
         labelRujukan.innerText = `Suami/Isteri kepada ${sasaran[0]} yang mana?`;
+    } else if (hubungan === "Cucu" || hubungan === "Cicit" || hubungan === "Piut / Cece" || hubungan === "Oneng-oneng") {
+        labelRujukan.innerText = `Anak kepada ${sasaran[0]} yang mana?`;
     } else {
         labelRujukan.innerText = `Ibu/bapa kepada siapa?`;
     }
 
     const snap = await getDocs(query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid)));
     const pilihan = snap.docs.filter(s => sasaran.includes(s.data().relationship));
+    
+    // Guna fungsi esc() seperti kod keselamatan asal bos
     sel.innerHTML = pilihan.length
-        ? pilihan.map(s => `<option value="${esc(s.id)}">${esc(s.data().name)} (${esc(s.data().relationship)})</option>`).join('')
+        ? `<option value="">-- Sila Pilih --</option>` + pilihan.map(s => `<option value="${esc(s.id)}">${esc(s.data().name)} (${esc(s.data().relationship)})</option>`).join('')
         : `<option value="">-- Tambah ${esc(sasaran[0])} dahulu --</option>`;
+        
     kumpulan.classList.remove('hidden');
 };
 
