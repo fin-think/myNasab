@@ -741,13 +741,18 @@ document.getElementById('authForm').addEventListener('submit', function (e) {
     }
 });
 
-// Auto-pilih jantina & dropdown "ibu/bapa kepada siapa"
-document.getElementById('tambahHubungan').addEventListener('change', function () {
-    const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
-    if (peta[this.value]) document.getElementById('tambahJantina').value = peta[this.value];
-    if (window.siapkanRujukan) window.siapkanRujukan(this.value);
-});
+// Auto-pilih jantina & urus dropdown rujukan menggunakan fungsi berpusat di app.js
+        document.getElementById('tambahHubungan').addEventListener('change', function() {
+            const val = this.value;
+            const peta = { "Datuk":"L", "Ayah":"L", "Suami":"L", "Bapa Mertua":"L", "Nenek":"P", "Ibu":"P", "Isteri":"P", "Ibu Mertua":"P" };
+            if(peta[val]) document.getElementById('tambahJantina').value = peta[val];
 
+            // Serahkan logik membina dropdown rujukan sepenuhnya kepada app.js
+            if (window.siapkanRujukan) {
+                window.siapkanRujukan(val);
+            }
+        });
+        
 // Status Hidup / Meninggal dunia
 window.tukarStatus = function (awalan) {
     const radio = document.querySelector('input[name="' + awalan + 'Status"]:checked');
