@@ -485,12 +485,16 @@ window.bukaPreview = async () => {
         let mertua = [];
         let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
         let menantuKeturunan = [];
+        
+        // TAMBAHAN: Pembolehubah untuk Cabang Sisi (Adik-beradik)
+        let adikBeradik = [], anakSaudara = [], cucuSaudara = [];
 
         const semuaId = new Set(querySnapshot.docs.map(s => s.id));
 
         querySnapshot.forEach((docSnap) => {
             const d = { ...docSnap.data(), id: docSnap.id };
             const hub = (d.relationship || '').toLowerCase();
+            
             if (d.is_root) diriSendiri = d;
             else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
             else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
@@ -505,7 +509,11 @@ window.bukaPreview = async () => {
             else if (hub === "cicit") cicit.push(d);
             else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
             else if (hub.includes("oneng")) oneng.push(d);
-            else if (hub.includes("menantu") || hub.includes("pasangan cucu")) menantuKeturunan.push(d);
+            // TAMBAHAN: Masukkan Ipar sebagai pasangan, dan tapis Adik-beradik, Anak/Cucu Saudara
+            else if (hub.includes("menantu") || hub.includes("pasangan cucu") || hub.includes("ipar")) menantuKeturunan.push(d);
+            else if (hub.includes("adik") || hub.includes("abang") || hub.includes("kakak") || hub === "adik-beradik") adikBeradik.push(d);
+            else if (hub.includes("anak saudara")) anakSaudara.push(d);
+            else if (hub.includes("cucu saudara")) cucuSaudara.push(d);
         });
 
         const binaKotak = (ahli, kategory) => {
@@ -574,7 +582,6 @@ window.bukaPreview = async () => {
 
         // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Ibu/Bapa Sebenar (ref_id)
         const renderKeturunan = (dataSemasa, bakiLevel) => {
-            // PENGENDALIAN PANGGILAN PERTAMA (Bila ia terima array of arrays)
             if (Array.isArray(dataSemasa[0])) {
                 let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
                 if (firstLevelIndex === -1) return '';
@@ -584,7 +591,6 @@ window.bukaPreview = async () => {
 
             if (!dataSemasa || dataSemasa.length === 0) return '';
             
-            // Susun dari paling tua ke muda (kiri ke kanan)
             dataSemasa.sort((a, b) => {
                 if (!a.dob) return 1;
                 if (!b.dob) return -1;
@@ -594,25 +600,18 @@ window.bukaPreview = async () => {
             let str = `<ul>`;
             
             dataSemasa.forEach((node, index) => {
-                // Cari pasangan (Menantu/Pasangan Cucu) yang dipautkan pada node ini
                 let pasanganNodeIni = menantuKeturunan.filter(m => m.ref_id === node.id);
-                
-                // Cari anak kepada node ini dari generasi seterusnya
                 let anakKepadaNode = [];
                 let bakiGenerasiSeterusnya = [];
                 
                 if (bakiLevel && bakiLevel.length > 0) {
                     let nextLevelAll = bakiLevel[0];
-                    
-                    // Tapis keturunan yang memang daftar di bawah ID node ini
                     anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
                     
-                    // FAILSAFE: Jika ini data lama yang tiada rujukan ref_id, kita letak bawah anak pertama
                     if (index === 0) {
                         let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
                         anakKepadaNode = anakKepadaNode.concat(dataYatim);
                     }
-                    
                     bakiGenerasiSeterusnya = bakiLevel.slice(1);
                 }
 
@@ -620,7 +619,6 @@ window.bukaPreview = async () => {
                 let classW = "couple-wrapper" + (adaKeturunanBawah ? " has-children" : "");
                 if (pasanganNodeIni.length > 0) classW += " has-spouse";
                 
-                // Susun Lelaki Kiri, Perempuan Kanan
                 let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
                 
                 let htmlKumpulan = '';
@@ -628,8 +626,6 @@ window.bukaPreview = async () => {
                 
                 str += `<li>`;
                 str += `<div class="${classW}">${htmlKumpulan}</div>`;
-                
-                // Jika dia ada anak bawah dia, panggil fungsi ini lagi secara rantaian
                 if (adaKeturunanBawah) {
                     str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya);
                 }
@@ -640,8 +636,10 @@ window.bukaPreview = async () => {
             return str;
         };
         
-        let htmlLayout = '<div class="tree"><ul><li>';
+        let htmlLayout = '<div class="tree"><ul>';
+        let senaraiTopLevel = []; // Kumpul Diri Sendiri & Adik Beradik di paras yang sama
 
+        // --- BINA BLOK DIRI SENDIRI (UTAMA) ---
         const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
         const adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
         const adaPasangan = pasangan.length > 0;
@@ -650,8 +648,7 @@ window.bukaPreview = async () => {
         if (adaPasangan) classWrapper += " has-spouse";
         if (adaKeturunan) classWrapper += " has-children";
 
-        htmlLayout += `<div class="${classWrapper}">`;
-
+        let htmlMain = `<div class="${classWrapper}">`;
         const mainArray = [];
         if (diriSendiri) mainArray.push(diriSendiri);
         pasangan.forEach(p => mainArray.push(p));
@@ -666,19 +663,49 @@ window.bukaPreview = async () => {
 
         mainArray.forEach((p) => {
             if (p.is_root) {
-                htmlLayout += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
             } else {
-                htmlLayout += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
+                htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
 
-        htmlLayout += `</div>`;
+        htmlMain += `</div>`;
+        if (adaKeturunan) htmlMain += renderKeturunan(senaraiKeturunan);
+        
+        let tarikhMain = (diriSendiri && diriSendiri.dob) ? new Date(diriSendiri.dob) : new Date('1970-01-01');
+        senaraiTopLevel.push({ dob: tarikhMain, html: `<li>${htmlMain}</li>` });
 
-        if (adaKeturunan) {
-            htmlLayout += renderKeturunan(senaraiKeturunan);
-        }
+        // --- BINA BLOK ADIK-BERADIK (CABANG SISI) ---
+        adikBeradik.forEach(adik => {
+            let tarikhAdik = adik.dob ? new Date(adik.dob) : new Date();
+            
+            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id); // Cari ipar yang diikat pada adik-beradik ini
+            let anakSini = anakSaudara.filter(c => c.ref_id === adik.id);
+            
+            let classW = "couple-wrapper sibling-couple" + (anakSini.length > 0 ? " has-children" : "");
+            if (iparNodeIni.length > 0) classW += " has-spouse";
+            
+            let gabung = [adik, ...iparNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+            
+            let htmlKumpulan = '';
+            gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'adik-beradik')}</div>`);
+            
+            let htmlAdik = `<div class="${classW}">${htmlKumpulan}</div>`;
+            
+            // Render keturunan adik-beradik menggunakan fungsi dinamik ref_id yang baru!
+            if (anakSini.length > 0) {
+                htmlAdik += renderKeturunan([anakSini, cucuSaudara]); 
+            }
+            senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
+        });
 
-        htmlLayout += `</li></ul></div>`;
+        // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
+        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
+        senaraiTopLevel.forEach(item => {
+            htmlLayout += item.html;
+        });
+
+        htmlLayout += `</ul></div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
         window.autoMuat();   // SELEPAS pokok dilukis
 
