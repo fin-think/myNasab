@@ -719,10 +719,8 @@ window.bukaPreview = async () => {
             htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
         }
 
-        htmlLayout += `</div>`;
+       htmlLayout += `</div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-        
-        window.tukarSusunAtur(); // <--- TAMBAH BARIS INI
         window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
@@ -730,25 +728,6 @@ window.bukaPreview = async () => {
     }
 };
 
-window.tukarSusunAtur = () => {
-    const layout = document.getElementById('pilihanLayout');
-    const pokok = document.querySelector('.tree');
-    
-    if (!pokok || !layout) return;
-
-    // Bersihkan kelas susunan sedia ada
-    pokok.classList.remove('hanging-left', 'hanging-right');
-
-    // Tambah kelas berdasarkan pilihan pengguna
-    if (layout.value === 'left') {
-        pokok.classList.add('hanging-left');
-    } else if (layout.value === 'right') {
-        pokok.classList.add('hanging-right');
-    }
-    
-    // Panggil semula fungsi muat untuk susun semula saiz zoom jika perlu
-    if(window.autoMuat) window.autoMuat();
-};
 
 
 
