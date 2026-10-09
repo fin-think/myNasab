@@ -674,13 +674,19 @@ window.bukaPreview = async () => {
             return 0;
         });
 
-        gabungDiri.forEach((p) => {
-            if (p.is_root) {
-                htmlDiri += `<div class="pillar">${binaKotak(p, 'diri')}</div>`; // Tiang atasan dipisahkan
-            } else {
-                htmlDiri += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
-            }
-        });
+       gabungDiri.forEach((p) => {
+            if (p.is_root) {
+                htmlDiri += `<div class="pillar">${binaKotak(p, 'diri')}</div>`;
+            } else {
+                // Jika Ayah/Ibu menjadi payung puncak (ada adik-beradik), 
+                // kita sembunyikan tiang Mertua supaya garisan tidak berlanggar.
+                if (ibuBapa.length > 0) {
+                     htmlDiri += `<div class="pillar">${binaKotak(p, 'pasangan')}</div>`;
+                } else {
+                     htmlDiri += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
+                }
+            }
+        });
 
         htmlDiri += `</div>`;
         if (adaKeturunan) htmlDiri += renderKeturunan(senaraiKeturunan);
