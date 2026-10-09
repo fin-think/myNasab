@@ -271,87 +271,6 @@
     border-left: 1px solid #a0a0a0; z-index: 1; transform: translateX(-50%);
 }
 
-/* =========================================
-   FUNGSI LEFT HANGING LAYOUT (MENEGAK KIRI)
-   ========================================= */
-.tree.hanging-left ul {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    padding-top: 0 !important;
-    padding-left: 25px !important;
-}
-
-.tree.hanging-left li {
-    display: flex !important;
-    padding: 15px 0 15px 20px !important;
-    position: relative;
-}
-
-/* Sembunyikan garisan melintang asal */
-.tree.hanging-left li::before,
-.tree.hanging-left li::after {
-    display: none !important;
-}
-
-/* Lukis garisan "L-Shape" (Menegak ke bawah, belok ke kanan) */
-.tree.hanging-left li::before {
-    content: '' !important;
-    display: block !important;
-    position: absolute;
-    top: -100%;
-    bottom: 50%; /* Berhenti di separuh kotak */
-    left: 0;
-    width: 20px; /* Panjang masuk ke dalam kotak */
-    border-left: 2px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    border-radius: 0 0 0 5px;
-}
-
-/* Kemaskan garisan kotak pertama supaya tidak terlebih ke atas */
-.tree.hanging-left li:first-child::before {
-    top: -15px;
-}
-
-/* ===========================================
-   FUNGSI RIGHT HANGING LAYOUT (MENEGAK KANAN)
-   =========================================== */
-.tree.hanging-right ul {
-    flex-direction: column !important;
-    align-items: flex-end !important;
-    padding-top: 0 !important;
-    padding-right: 25px !important;
-    padding-left: 0 !important;
-}
-
-.tree.hanging-right li {
-    display: flex !important;
-    padding: 15px 20px 15px 0 !important;
-    flex-direction: row-reverse !important;
-    position: relative;
-}
-
-.tree.hanging-right li::before,
-.tree.hanging-right li::after {
-    display: none !important;
-}
-
-/* Lukis garisan "L-Shape" Terbalik (Menegak ke bawah, belok ke kiri) */
-.tree.hanging-right li::before {
-    content: '' !important;
-    display: block !important;
-    position: absolute;
-    top: -100%;
-    bottom: 50%;
-    right: 0;
-    width: 20px;
-    border-right: 2px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    border-radius: 0 0 5px 0;
-}
-
-.tree.hanging-right li:first-child::before {
-    top: -15px;
-}
 
        
     </style>
@@ -657,16 +576,6 @@
     <span id="labelZoom">100%</span>
     <button type="button" title="Besarkan" onclick="window.zoomMasuk()">+</button>
     <button type="button" class="muat" title="Muat ikut skrin" onclick="window.autoMuat(true)">Muat</button>
-</div>
-
-<!-- Tambah ini di sebelah dropdown Saiz Kertas -->
-<div class="flex items-center space-x-2">
-    <label class="text-sm font-semibold">Susunan:</label>
-    <select id="pilihanLayout" onchange="window.tukarSusunAtur()" class="border p-1 rounded">
-        <option value="standard">Standard (Melebar)</option>
-        <option value="left">Left Hanging (Menegak Kiri)</option>
-        <option value="right">Right Hanging (Menegak Kanan)</option>
-    </select>
 </div>
 
                     
