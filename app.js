@@ -200,14 +200,21 @@ window.muatTurunSalasilah = async () => {
             let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
             // Kira Umur (Automatik ikut tahun semasa. Jika tiada DOB = Meninggal Dunia)
-            let paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
-            
-            if (data.dob && data.dob.trim() !== '') {
-                const tahunLahir = parseInt(data.dob.split('-')[0], 10);
-                const tahunSemasa = new Date().getFullYear(); // Sistem kesan tahun secara automatik (cth: 2026, 2027...)
-                const umur = tahunSemasa - tahunLahir;
-                paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
-            }
+            let paparanUmur = '';
+
+// TUKAR DI SINI: Gunakan 'meninggal' mengikut apa yang disave dalam database
+if (data.status === 'meninggal') { 
+    paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
+} 
+else if (data.dob && data.dob.trim() !== '') {
+    const tahunLahir = parseInt(data.dob.split('-')[0], 10);
+    const tahunSemasa = new Date().getFullYear();
+    const umur = tahunSemasa - tahunLahir;
+    paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
+} 
+else {
+    paparanUmur = '-';
+}
 
             let gambarMini = data.photo_url
                 ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
@@ -1317,8 +1324,8 @@ window.kiraFaraidAuto = (docs) => {
             return; // Berhenti di sini untuk orang ini, teruskan ke orang seterusnya
         }
         
-        // B: HALANG WARIS MENINGGAL DUNIA (Jika tiada DOB, anggap mati dan GUGUR Faraid)
-        if (!d.dob || d.dob.trim() === '') {
+        // B: HALANG WARIS MENINGGAL DUNIA (Tapisan Berganda)
+        if (d.status === 'meninggal' || !d.dob || d.dob.trim() === '') {
             return; // Berhenti di sini, dia takkan dikira dalam isteriCount, bapa, dll
         }
 
