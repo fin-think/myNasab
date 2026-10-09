@@ -202,18 +202,16 @@ window.muatTurunSalasilah = async () => {
             // Kira Umur (Periksa status hidup/mati dahulu sebelum kira umur)
 let paparanUmur = '';
 
-// 1. Semak jika statusnya disetkan kepada meninggal dunia
-if (data.status === 'Meninggal dunia') { // Pastikan 'data.status' adalah nama variable yang betul ikut kod anda
+// TUKAR DI SINI: Gunakan 'meninggal' mengikut apa yang disave dalam database
+if (data.status === 'meninggal') { 
     paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
 } 
-// 2. Jika masih hidup dan ada DOB, baru kira umur
 else if (data.dob && data.dob.trim() !== '') {
     const tahunLahir = parseInt(data.dob.split('-')[0], 10);
     const tahunSemasa = new Date().getFullYear();
     const umur = tahunSemasa - tahunLahir;
     paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
 } 
-// 3. Jika tiada DOB tapi masih hidup (kosongkan atau letak sengkang)
 else {
     paparanUmur = '-';
 }
