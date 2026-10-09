@@ -600,6 +600,20 @@ window.bukaPreview = async () => {
             return str;
         };
 
+const binaIbuBapaAtas = (senarai, sisa) => {
+            const bapa = senarai.find(lelaki) || senarai[0];
+            const ibu = senarai.find(x => x !== bapa);
+            const bAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
+            const iAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
+            
+            let kelas = 'couple-wrapper main-couple induk-atas has-children';
+            if (ibu) kelas += ' has-spouse';
+            if (bAda && iAda) kelas += ' anc-both';
+            
+            return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, 'ibubapa', true)}${ibu ? binaTiangAtasan(ibu, sisa, 'ibubapa', false) : ''}</div>`;
+        };
+
+        
         // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Ibu/Bapa Sebenar (ref_id)
         const renderKeturunan = (dataSemasa, bakiLevel) => {
             if (Array.isArray(dataSemasa[0])) {
@@ -681,13 +695,14 @@ window.bukaPreview = async () => {
             return 0;
         });
 
-       mainArray.forEach((p) => {
+      mainArray.forEach((p) => {
             if (p.is_root) {
-                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+                if (ibuBapa.length > 0) {
+                    htmlMain += `<div class="pillar">${binaKotak(p, 'diri')}</div>`;
+                } else {
+                    htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+                }
             } else {
-                // JIKA IBU BAPA WUJUD (Ibu bapa di atas kepala Diri Sendiri):
-                // Kita sembunyikan tiang Mertua supaya paras Isteri & Diri Sendiri sama rata,
-                // jadi garisan dari Ayah/Ibu takkan tersalah 'hinggap' pada Bapa Mertua!
                 if (ibuBapa.length > 0) {
                     htmlMain += `<div class="pillar">${binaKotak(p, 'pasangan')}</div>`;
                 } else {
@@ -726,15 +741,24 @@ window.bukaPreview = async () => {
             senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
         });
 
-        // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
-        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
-        senaraiTopLevel.forEach(item => {
-            htmlLayout += item.html;
-        });
+     // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
+        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
+        let htmlSemuaTopLevel = senaraiTopLevel.map(item => item.html).join('');
 
-        htmlLayout += `</ul></div>`;
-        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-        window.autoMuat();   // SELEPAS pokok dilukis
+        let htmlLayout = '<div class="tree">';
+        
+        // JIKA ADA IBU BAPA, KITA JADIKAN MEREKA PAYUNG KEPADA DIRI SENDIRI & ADIK-BERADIK
+        if (ibuBapa.length > 0) {
+            let htmlIbuBapaPuncak = binaIbuBapaAtas(ibuBapa, [datukNenek, moyang, buyut, cakawari, cilawagi]);
+            htmlLayout += `<ul><li>${htmlIbuBapaPuncak}<ul>${htmlSemuaTopLevel}</ul></li></ul>`;
+        } else {
+            // KALAU TAKDA IBU BAPA, KELUARKAN DIRI SENDIRI & ADIK BERADIK SEPERTI BIASA
+            htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
+        }
+
+        htmlLayout += `</div>`;
+        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
+        window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
