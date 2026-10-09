@@ -721,12 +721,37 @@ window.bukaPreview = async () => {
 
         htmlLayout += `</div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
+        
+        window.tukarSusunAtur(); // <--- TAMBAH BARIS INI
         window.autoMuat();   // SELEPAS pokok dilukis
 
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
     }
 };
+
+window.tukarSusunAtur = () => {
+    const layout = document.getElementById('pilihanLayout');
+    const pokok = document.querySelector('.tree');
+    
+    if (!pokok || !layout) return;
+
+    // Bersihkan kelas susunan sedia ada
+    pokok.classList.remove('hanging-left', 'hanging-right');
+
+    // Tambah kelas berdasarkan pilihan pengguna
+    if (layout.value === 'left') {
+        pokok.classList.add('hanging-left');
+    } else if (layout.value === 'right') {
+        pokok.classList.add('hanging-right');
+    }
+    
+    // Panggil semula fungsi muat untuk susun semula saiz zoom jika perlu
+    if(window.autoMuat) window.autoMuat();
+};
+
+
+
 
 // --- 8. SAIZ KERTAS & CETAK ---
 const SAIZ_KERTAS = { A4: { w: 297, h: 210 }, A3: { w: 420, h: 297 }, A1: { w: 841, h: 594 } };
