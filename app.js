@@ -681,13 +681,20 @@ window.bukaPreview = async () => {
             return 0;
         });
 
-        mainArray.forEach((p) => {
-            if (p.is_root) {
-                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
-            } else {
-                htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
-            }
-        });
+       mainArray.forEach((p) => {
+            if (p.is_root) {
+                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+            } else {
+                // JIKA IBU BAPA WUJUD (Ibu bapa di atas kepala Diri Sendiri):
+                // Kita sembunyikan tiang Mertua supaya paras Isteri & Diri Sendiri sama rata,
+                // jadi garisan dari Ayah/Ibu takkan tersalah 'hinggap' pada Bapa Mertua!
+                if (ibuBapa.length > 0) {
+                    htmlMain += `<div class="pillar">${binaKotak(p, 'pasangan')}</div>`;
+                } else {
+                    htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
+                }
+            }
+        });
 
         htmlMain += `</div>`;
         if (adaKeturunan) htmlMain += renderKeturunan(senaraiKeturunan);
