@@ -199,15 +199,24 @@ window.muatTurunSalasilah = async () => {
             
             let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
-            // Kira Umur (Automatik ikut tahun semasa. Jika tiada DOB = Meninggal Dunia)
-            let paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
-            
-            if (data.dob && data.dob.trim() !== '') {
-                const tahunLahir = parseInt(data.dob.split('-')[0], 10);
-                const tahunSemasa = new Date().getFullYear(); // Sistem kesan tahun secara automatik (cth: 2026, 2027...)
-                const umur = tahunSemasa - tahunLahir;
-                paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
-            }
+            // Kira Umur (Periksa status hidup/mati dahulu sebelum kira umur)
+let paparanUmur = '';
+
+// 1. Semak jika statusnya disetkan kepada meninggal dunia
+if (data.status === 'Meninggal dunia') { // Pastikan 'data.status' adalah nama variable yang betul ikut kod anda
+    paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
+} 
+// 2. Jika masih hidup dan ada DOB, baru kira umur
+else if (data.dob && data.dob.trim() !== '') {
+    const tahunLahir = parseInt(data.dob.split('-')[0], 10);
+    const tahunSemasa = new Date().getFullYear();
+    const umur = tahunSemasa - tahunLahir;
+    paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
+} 
+// 3. Jika tiada DOB tapi masih hidup (kosongkan atau letak sengkang)
+else {
+    paparanUmur = '-';
+}
 
             let gambarMini = data.photo_url
                 ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
