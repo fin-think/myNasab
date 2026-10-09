@@ -1324,8 +1324,8 @@ window.kiraFaraidAuto = (docs) => {
             return; // Berhenti di sini untuk orang ini, teruskan ke orang seterusnya
         }
         
-        // B: HALANG WARIS MENINGGAL DUNIA (Jika tiada DOB, anggap mati dan GUGUR Faraid)
-        if (!d.dob || d.dob.trim() === '') {
+        // B: HALANG WARIS MENINGGAL DUNIA (Tapisan Berganda)
+        if (d.status === 'meninggal' || !d.dob || d.dob.trim() === '') {
             return; // Berhenti di sini, dia takkan dikira dalam isteriCount, bapa, dll
         }
 
