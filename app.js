@@ -199,22 +199,15 @@ window.muatTurunSalasilah = async () => {
             
             let lokasi = [data.city, data.state].filter(Boolean).join(', ') || '-';
             
-            // Kira Umur (Periksa status hidup/mati dahulu sebelum kira umur)
-let paparanUmur = '';
-
-// TUKAR DI SINI: Gunakan 'meninggal' mengikut apa yang disave dalam database
-if (data.status === 'meninggal') { 
-    paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
-} 
-else if (data.dob && data.dob.trim() !== '') {
-    const tahunLahir = parseInt(data.dob.split('-')[0], 10);
-    const tahunSemasa = new Date().getFullYear();
-    const umur = tahunSemasa - tahunLahir;
-    paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
-} 
-else {
-    paparanUmur = '-';
-}
+            // Kira Umur (Automatik ikut tahun semasa. Jika tiada DOB = Meninggal Dunia)
+            let paparanUmur = '<span style="color: #e74c3c; font-weight: bold; font-size: 11px; background: #fadbd8; padding: 3px 6px; border-radius: 6px; white-space: nowrap;">Meninggal dunia</span>';
+            
+            if (data.dob && data.dob.trim() !== '') {
+                const tahunLahir = parseInt(data.dob.split('-')[0], 10);
+                const tahunSemasa = new Date().getFullYear(); // Sistem kesan tahun secara automatik (cth: 2026, 2027...)
+                const umur = tahunSemasa - tahunLahir;
+                paparanUmur = `${data.dob} <br><small style="color:#7f8c8d; font-weight:bold;">(${umur} tahun)</small>`;
+            }
 
             let gambarMini = data.photo_url
                 ? `<img src="${data.photo_url}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #bdc3c7;">` 
@@ -487,254 +480,246 @@ if (formEdit) {
 
 // --- 7. PREVIEW "KELUARGA SAYA" ---
 window.bukaPreview = async () => {
-    if (!penggunaSemasa) return;
+    if (!penggunaSemasa) return;
 
-    const pp = document.getElementById('pilihanPaparan'); if (pp) pp.value = 'saya';
+    const pp = document.getElementById('pilihanPaparan'); if (pp) pp.value = 'saya';
 
-    document.getElementById('modalPreview').classList.remove('hidden');
-    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok keturunan...</p>';
-    document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
+    document.getElementById('modalPreview').classList.remove('hidden');
+    document.getElementById('ruangAutoLayout').innerHTML = '<p>Sedang melukis pokok keturunan...</p>';
+    document.getElementById('namaAkaunCetak').innerText = document.getElementById('treeNameDisplay').innerText;
 
-    try {
-        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
-        const querySnapshot = await getDocs(q);
+    try {
+        const q = query(collection(db, "mynasab_nodes"), where("owner_uid", "==", penggunaSemasa.uid));
+        const querySnapshot = await getDocs(q);
 
-        let diriSendiri = null;
-        let pasangan = [];
-        let ibuBapa = [], datukNenek = [], moyang = [], buyut = [], cakawari = [], cilawagi = [];
-        let mertua = [];
-        let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
-        let menantuKeturunan = [];
-        
-        // TAMBAHAN: Pembolehubah untuk Cabang Sisi (Adik-beradik)
-        let adikBeradik = [], anakSaudara = [], cucuSaudara = [];
+        let diriSendiri = null;
+        let pasangan = [];
+        let ibuBapa = [], datukNenek = [], moyang = [], buyut = [], cakawari = [], cilawagi = [];
+        let mertua = [];
+        let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
+        let menantuKeturunan = [];
+        let adikBeradik = [], anakSaudara = [], cucuSaudara = [];
 
-        const semuaId = new Set(querySnapshot.docs.map(s => s.id));
+        const semuaId = new Set(querySnapshot.docs.map(s => s.id));
 
-        querySnapshot.forEach((docSnap) => {
-            const d = { ...docSnap.data(), id: docSnap.id };
-            const hub = (d.relationship || '').toLowerCase();
-            
-            if (d.is_root) diriSendiri = d;
-            else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
-            else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
-            else if (hub.includes("mertua")) mertua.push(d);
-            else if (hub.includes("datuk") || hub.includes("nenek")) datukNenek.push(d);
-            else if (hub.includes("moyang")) moyang.push(d);
-            else if (hub.includes("buyut")) buyut.push(d);
-            else if (hub.includes("cakawari")) cakawari.push(d);
-            else if (hub.includes("cilawagi")) cilawagi.push(d);
-            else if (hub === "anak") anakAnak.push(d);
-            else if (hub === "cucu") cucu.push(d);
-            else if (hub === "cicit") cicit.push(d);
-            else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
-            else if (hub.includes("oneng")) oneng.push(d);
-            // TAMBAHAN: Masukkan Ipar sebagai pasangan, dan tapis Adik-beradik, Anak/Cucu Saudara
-            else if (hub.includes("menantu") || hub.includes("pasangan cucu") || hub.includes("ipar")) menantuKeturunan.push(d);
-            else if (hub.includes("adik") || hub.includes("abang") || hub.includes("kakak") || hub === "adik-beradik") adikBeradik.push(d);
-            else if (hub.includes("anak saudara")) anakSaudara.push(d);
-            else if (hub.includes("cucu saudara")) cucuSaudara.push(d);
-        });
+        querySnapshot.forEach((docSnap) => {
+            const d = { ...docSnap.data(), id: docSnap.id };
+            const hub = (d.relationship || '').toLowerCase();
+            
+            if (d.is_root) diriSendiri = d;
+            else if (hub.includes("suami") || hub.includes("isteri")) pasangan.push(d);
+            else if (hub === "ayah" || hub === "ibu") ibuBapa.push(d);
+            else if (hub.includes("mertua")) mertua.push(d);
+            else if (hub.includes("datuk") || hub.includes("nenek")) datukNenek.push(d);
+            else if (hub.includes("moyang")) moyang.push(d);
+            else if (hub.includes("buyut")) buyut.push(d);
+            else if (hub.includes("cakawari")) cakawari.push(d);
+            else if (hub.includes("cilawagi")) cilawagi.push(d);
+            else if (hub === "anak") anakAnak.push(d);
+            else if (hub === "cucu") cucu.push(d);
+            else if (hub === "cicit") cicit.push(d);
+            else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
+            else if (hub.includes("oneng")) oneng.push(d);
+            else if (hub.includes("menantu") || hub.includes("pasangan cucu") || hub.includes("ipar")) menantuKeturunan.push(d);
+            else if (hub.includes("adik") || hub.includes("abang") || hub.includes("kakak") || hub === "adik-beradik") adikBeradik.push(d);
+            else if (hub.includes("anak saudara")) anakSaudara.push(d);
+            else if (hub.includes("cucu saudara")) cucuSaudara.push(d);
+        });
 
-        const binaKotak = (ahli, kategory) => {
-            let tema = 'theme-neutral';
-            const hub = (ahli.relationship || '').toLowerCase();
+        const binaKotak = (ahli, kategory) => {
+            let tema = 'theme-neutral';
+            const hub = (ahli.relationship || '').toLowerCase();
 
-            if (ahli.gender === 'L') tema = 'theme-lelaki';
-            else if (ahli.gender === 'P') tema = 'theme-perempuan';
-            else if (hub.match(/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/)) tema = 'theme-lelaki';
-            else if (hub.match(/ibu|isteri|nenek/)) tema = 'theme-perempuan';
+            if (ahli.gender === 'L') tema = 'theme-lelaki';
+            else if (ahli.gender === 'P') tema = 'theme-perempuan';
+            else if (hub.match(/ayah|suami|bapa|datuk|moyang|buyut|cakawari|cilawagi/)) tema = 'theme-lelaki';
+            else if (hub.match(/ibu|isteri|nenek/)) tema = 'theme-perempuan';
 
-            let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-            if (ahli.photo_url && ahli.photo_url !== "") {
-                paparanAvatar = `<img src="${esc(ahli.photo_url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
-            }
+            let paparanAvatar = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            if (ahli.photo_url && ahli.photo_url !== "") {
+                paparanAvatar = `<img src="${esc(ahli.photo_url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
 
-            return `
-                <div class="mh-card ${tema}">
-                    <div class="badge-mini">${esc(ahli.relationship)}</div>
-                    <div class="mh-avatar">${paparanAvatar}</div>
-                    <div class="mh-details">
-                        <p class="mh-name" title="${esc(ahli.name)}">${esc(ahli.name)}</p>
-                        <p class="mh-info" style="font-size: 10px;">${infoLahir(ahli)}</p>
-                    </div>
-                </div>
-            `;
-        };
+            return `
+                <div class="mh-card ${tema}">
+                    <div class="badge-mini">${esc(ahli.relationship)}</div>
+                    <div class="mh-avatar">${paparanAvatar}</div>
+                    <div class="mh-details">
+                        <p class="mh-name" title="${esc(ahli.name)}">${esc(ahli.name)}</p>
+                        <p class="mh-info" style="font-size: 10px;">${infoLahir(ahli)}</p>
+                    </div>
+                </div>
+            `;
+        };
 
-        const cariIbuBapa = (ahli, levels, utama) => {
-            const idx = levels.findIndex(arr => arr.length > 0);
-            if (idx === -1) return { senarai: [], sisa: [] };
-            const senarai = levels[idx].filter(x =>
-                (x.ref_id && semuaId.has(x.ref_id)) ? x.ref_id === ahli.id : utama
-            );
-            return { senarai, sisa: levels.slice(idx + 1) };
-        };
+        const cariIbuBapa = (ahli, levels, utama) => {
+            const idx = levels.findIndex(arr => arr.length > 0);
+            if (idx === -1) return { senarai: [], sisa: [] };
+            const senarai = levels[idx].filter(x =>
+                (x.ref_id && semuaId.has(x.ref_id)) ? x.ref_id === ahli.id : utama
+            );
+            return { senarai, sisa: levels.slice(idx + 1) };
+        };
 
-        const lelaki = x => x.gender
-            ? x.gender === 'L'
-            : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
+        const lelaki = x => x.gender ? x.gender === 'L' : /ayah|bapa|datuk|suami|moyang|buyut|cakawari|cilawagi/.test((x.relationship || '').toLowerCase());
 
-        const binaTiangAtasan = (ahli, levels = [], kategoryAhli = 'neutral', utama = true) => {
-            let str = `<div class="pillar">`;
-            const { senarai, sisa } = cariIbuBapa(ahli, levels, utama);
+        const binaTiangAtasan = (ahli, levels = [], kategoryAhli = 'neutral', utama = true) => {
+            let str = `<div class="pillar">`;
+            const { senarai, sisa } = cariIbuBapa(ahli, levels, utama);
 
-            if (senarai.length > 0) {
-                const bapa = senarai.find(lelaki) || senarai[0];
-                const ibu = senarai.find(x => x !== bapa);
+            if (senarai.length > 0) {
+                const bapa = senarai.find(lelaki) || senarai[0];
+                const ibu = senarai.find(x => x !== bapa);
+                let kelas = "couple-wrapper ancestor-couple has-children";
+                if (ibu) kelas += " has-spouse";
+                
+                const bapaAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
+                const ibuAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
+                if (bapaAda && ibuAda) kelas += " anc-both";
 
-                let kelas = "couple-wrapper ancestor-couple has-children";
-                if (ibu) kelas += " has-spouse";
-                const bapaAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
-                const ibuAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
-                if (bapaAda && ibuAda) kelas += " anc-both";
+                str += `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, 'ibubapa', true)}${ibu ? binaTiangAtasan(ibu, sisa, 'ibubapa', false) : ''}</div>`;
+            }
+            str += binaKotak(ahli, kategoryAhli);
+            str += `</div>`;
+            return str;
+        };
 
-                str += `<div class="${kelas}">`;
-                str += binaTiangAtasan(bapa, sisa, 'ibubapa', true);
-                if (ibu) str += binaTiangAtasan(ibu, sisa, 'ibubapa', false);
-                str += `</div>`;
-            }
+        const binaIbuBapaAtas = (senarai, sisa) => {
+            const bapa = senarai.find(lelaki) || senarai[0];
+            const ibu = senarai.find(x => x !== bapa);
+            const bAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
+            const iAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
+            
+            let kelas = 'couple-wrapper main-couple induk-atas has-children';
+            if (ibu) kelas += ' has-spouse';
+            if (bAda && iAda) kelas += ' anc-both';
+            
+            return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, 'ibubapa', true)}${ibu ? binaTiangAtasan(ibu, sisa, 'ibubapa', false) : ''}</div>`;
+        };
 
-            str += binaKotak(ahli, kategoryAhli);
-            str += `</div>`;
-            return str;
-        };
+        const renderKeturunan = (dataSemasa, bakiLevel) => {
+            if (Array.isArray(dataSemasa[0])) {
+                let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
+                if (firstLevelIndex === -1) return '';
+                bakiLevel = dataSemasa.slice(firstLevelIndex + 1);
+                dataSemasa = dataSemasa[firstLevelIndex];
+            }
 
-        // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Ibu/Bapa Sebenar (ref_id)
-        const renderKeturunan = (dataSemasa, bakiLevel) => {
-            if (Array.isArray(dataSemasa[0])) {
-                let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
-                if (firstLevelIndex === -1) return '';
-                bakiLevel = dataSemasa.slice(firstLevelIndex + 1);
-                dataSemasa = dataSemasa[firstLevelIndex];
-            }
+            if (!dataSemasa || dataSemasa.length === 0) return '';
+            
+            dataSemasa.sort((a, b) => {
+                if (!a.dob) return 1;
+                if (!b.dob) return -1;
+                return new Date(a.dob) - new Date(b.dob);
+            });
+            
+            let str = `<ul>`;
+            dataSemasa.forEach((node, index) => {
+                let pasanganNodeIni = menantuKeturunan.filter(m => m.ref_id === node.id);
+                let anakKepadaNode = [];
+                let bakiGenerasiSeterusnya = [];
+                
+                if (bakiLevel && bakiLevel.length > 0) {
+                    let nextLevelAll = bakiLevel[0];
+                    anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
+                    if (index === 0) {
+                        let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
+                        anakKepadaNode = anakKepadaNode.concat(dataYatim);
+                    }
+                    bakiGenerasiSeterusnya = bakiLevel.slice(1);
+                }
 
-            if (!dataSemasa || dataSemasa.length === 0) return '';
-            
-            dataSemasa.sort((a, b) => {
-                if (!a.dob) return 1;
-                if (!b.dob) return -1;
-                return new Date(a.dob) - new Date(b.dob);
-            });
-            
-            let str = `<ul>`;
-            
-            dataSemasa.forEach((node, index) => {
-                let pasanganNodeIni = menantuKeturunan.filter(m => m.ref_id === node.id);
-                let anakKepadaNode = [];
-                let bakiGenerasiSeterusnya = [];
-                
-                if (bakiLevel && bakiLevel.length > 0) {
-                    let nextLevelAll = bakiLevel[0];
-                    anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
-                    
-                    if (index === 0) {
-                        let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
-                        anakKepadaNode = anakKepadaNode.concat(dataYatim);
-                    }
-                    bakiGenerasiSeterusnya = bakiLevel.slice(1);
-                }
+                let adaKeturunanBawah = anakKepadaNode.length > 0;
+                let classW = "couple-wrapper" + (adaKeturunanBawah ? " has-children" : "");
+                if (pasanganNodeIni.length > 0) classW += " has-spouse";
+                
+                let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+                let htmlKumpulan = '';
+                gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
+                
+                str += `<li><div class="${classW}">${htmlKumpulan}</div>`;
+                if (adaKeturunanBawah) str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya);
+                str += `</li>`;
+            });
+            return str + `</ul>`;
+        };
+        
+        let htmlLayout = '<div class="tree">';
+        let senaraiTopLevel = []; 
 
-                let adaKeturunanBawah = anakKepadaNode.length > 0;
-                let classW = "couple-wrapper" + (adaKeturunanBawah ? " has-children" : "");
-                if (pasanganNodeIni.length > 0) classW += " has-spouse";
-                
-                let gabung = [node, ...pasanganNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
-                
-                let htmlKumpulan = '';
-                gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
-                
-                str += `<li>`;
-                str += `<div class="${classW}">${htmlKumpulan}</div>`;
-                if (adaKeturunanBawah) {
-                    str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya);
-                }
-                str += `</li>`;
-            });
-            
-            str += `</ul>`;
-            return str;
-        };
-        
-        let htmlLayout = '<div class="tree"><ul>';
-        let senaraiTopLevel = []; // Kumpul Diri Sendiri & Adik Beradik di paras yang sama
+        // --- BINA BLOK DIRI SENDIRI (Tanpa Ibu Bapa) ---
+        const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
+        const adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
+        let classWrapperDiri = "couple-wrapper main-couple";
+        if (pasangan.length > 0) classWrapperDiri += " has-spouse";
+        if (adaKeturunan) classWrapperDiri += " has-children";
 
-        // --- BINA BLOK DIRI SENDIRI (UTAMA) ---
-        const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
-        const adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
-        const adaPasangan = pasangan.length > 0;
+        let htmlDiri = `<div class="${classWrapperDiri}">`;
+        let gabungDiri = [];
+        if (diriSendiri) gabungDiri.push(diriSendiri);
+        pasangan.forEach(p => gabungDiri.push(p));
 
-        let classWrapper = "couple-wrapper main-couple";
-        if (adaPasangan) classWrapper += " has-spouse";
-        if (adaKeturunan) classWrapper += " has-children";
+        gabungDiri.sort((a, b) => {
+            const aLelaki = a.gender === 'L' || (a.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
+            const bLelaki = b.gender === 'L' || (b.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
+            if (aLelaki && !bLelaki) return -1;
+            if (!aLelaki && bLelaki) return 1;
+            return 0;
+        });
 
-        let htmlMain = `<div class="${classWrapper}">`;
-        const mainArray = [];
-        if (diriSendiri) mainArray.push(diriSendiri);
-        pasangan.forEach(p => mainArray.push(p));
+        gabungDiri.forEach((p) => {
+            if (p.is_root) {
+                htmlDiri += `<div class="pillar">${binaKotak(p, 'diri')}</div>`; // Tiang atasan dipisahkan
+            } else {
+                htmlDiri += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
+            }
+        });
 
-        mainArray.sort((a, b) => {
-            const aLelaki = a.gender === 'L' || (a.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
-            const bLelaki = b.gender === 'L' || (b.relationship || '').toLowerCase().match(/suami|ayah|bapa/);
-            if (aLelaki && !bLelaki) return -1;
-            if (!aLelaki && bLelaki) return 1;
-            return 0;
-        });
+        htmlDiri += `</div>`;
+        if (adaKeturunan) htmlDiri += renderKeturunan(senaraiKeturunan);
+        
+        let tarikhMain = (diriSendiri && diriSendiri.dob) ? new Date(diriSendiri.dob) : new Date('1970-01-01');
+        senaraiTopLevel.push({ dob: tarikhMain, html: `<li>${htmlDiri}</li>` });
 
-        mainArray.forEach((p) => {
-            if (p.is_root) {
-                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
-            } else {
-                htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
-            }
-        });
+        // --- BINA BLOK ADIK-BERADIK ---
+        adikBeradik.forEach(adik => {
+            let tarikhAdik = adik.dob ? new Date(adik.dob) : new Date();
+            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id); 
+            let anakSini = anakSaudara.filter(c => c.ref_id === adik.id);
+            
+            let classW = "couple-wrapper sibling-couple" + (anakSini.length > 0 ? " has-children" : "");
+            if (iparNodeIni.length > 0) classW += " has-spouse";
+            
+            let gabung = [adik, ...iparNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
+            let htmlKumpulan = '';
+            gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'adik-beradik')}</div>`);
+            
+            let htmlAdik = `<div class="${classW}">${htmlKumpulan}</div>`;
+            if (anakSini.length > 0) {
+                htmlAdik += renderKeturunan([anakSini, cucuSaudara]); 
+            }
+            senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
+        });
 
-        htmlMain += `</div>`;
-        if (adaKeturunan) htmlMain += renderKeturunan(senaraiKeturunan);
-        
-        let tarikhMain = (diriSendiri && diriSendiri.dob) ? new Date(diriSendiri.dob) : new Date('1970-01-01');
-        senaraiTopLevel.push({ dob: tarikhMain, html: `<li>${htmlMain}</li>` });
+        // --- SUSUN & CANTUMKAN IBU BAPA DI PUNCAK CARTA ---
+        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
+        let htmlSemuaTopLevel = senaraiTopLevel.map(item => item.html).join('');
 
-        // --- BINA BLOK ADIK-BERADIK (CABANG SISI) ---
-        adikBeradik.forEach(adik => {
-            let tarikhAdik = adik.dob ? new Date(adik.dob) : new Date();
-            
-            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id); // Cari ipar yang diikat pada adik-beradik ini
-            let anakSini = anakSaudara.filter(c => c.ref_id === adik.id);
-            
-            let classW = "couple-wrapper sibling-couple" + (anakSini.length > 0 ? " has-children" : "");
-            if (iparNodeIni.length > 0) classW += " has-spouse";
-            
-            let gabung = [adik, ...iparNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
-            
-            let htmlKumpulan = '';
-            gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'adik-beradik')}</div>`);
-            
-            let htmlAdik = `<div class="${classW}">${htmlKumpulan}</div>`;
-            
-            // Render keturunan adik-beradik menggunakan fungsi dinamik ref_id yang baru!
-            if (anakSini.length > 0) {
-                htmlAdik += renderKeturunan([anakSini, cucuSaudara]); 
-            }
-            senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
-        });
+        if (ibuBapa.length > 0) {
+            let htmlIbuBapaPuncak = binaIbuBapaAtas(ibuBapa, [datukNenek, moyang, buyut, cakawari, cilawagi]);
+            htmlLayout += `<ul><li>${htmlIbuBapaPuncak}<ul>${htmlSemuaTopLevel}</ul></li></ul>`;
+        } else {
+            htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
+        }
 
-        // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
-        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
-        senaraiTopLevel.forEach(item => {
-            htmlLayout += item.html;
-        });
+        htmlLayout += `</div>`;
+        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
+        window.autoMuat();   // SELEPAS pokok dilukis
 
-        htmlLayout += `</ul></div>`;
-        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-        window.autoMuat();   // SELEPAS pokok dilukis
-
-    } catch (error) {
-        document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
-    }
+    } catch (error) {
+        document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
+    }
 };
-
-
 
 // --- 8. SAIZ KERTAS & CETAK ---
 const SAIZ_KERTAS = { A4: { w: 297, h: 210 }, A3: { w: 420, h: 297 }, A1: { w: 841, h: 594 } };
@@ -1332,8 +1317,8 @@ window.kiraFaraidAuto = (docs) => {
             return; // Berhenti di sini untuk orang ini, teruskan ke orang seterusnya
         }
         
-        // B: HALANG WARIS MENINGGAL DUNIA (Tapisan Berganda)
-        if (d.status === 'meninggal' || !d.dob || d.dob.trim() === '') {
+        // B: HALANG WARIS MENINGGAL DUNIA (Jika tiada DOB, anggap mati dan GUGUR Faraid)
+        if (!d.dob || d.dob.trim() === '') {
             return; // Berhenti di sini, dia takkan dikira dalam isteriCount, bapa, dll
         }
 
