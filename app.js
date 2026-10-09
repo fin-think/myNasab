@@ -697,17 +697,9 @@ const binaIbuBapaAtas = (senarai, sisa) => {
 
       mainArray.forEach((p) => {
             if (p.is_root) {
-                if (ibuBapa.length > 0) {
-                    htmlMain += `<div class="pillar">${binaKotak(p, 'diri')}</div>`;
-                } else {
-                    htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
-                }
+                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
             } else {
-                if (ibuBapa.length > 0) {
-                    htmlMain += `<div class="pillar">${binaKotak(p, 'pasangan')}</div>`;
-                } else {
-                    htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
-                }
+                htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
 
@@ -741,25 +733,16 @@ const binaIbuBapaAtas = (senarai, sisa) => {
             senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
         });
 
-     // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
-        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
-        let htmlSemuaTopLevel = senaraiTopLevel.map(item => item.html).join('');
+      // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
+        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
+        senaraiTopLevel.forEach(item => {
+            htmlLayout += item.html;
+        });
 
-        let htmlLayout = '<div class="tree">';
+        htmlLayout += `</ul></div>`;
+        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
+        window.autoMuat();   // SELEPAS pokok dilukis
         
-        // JIKA ADA IBU BAPA, KITA JADIKAN MEREKA PAYUNG KEPADA DIRI SENDIRI & ADIK-BERADIK
-        if (ibuBapa.length > 0) {
-            let htmlIbuBapaPuncak = binaIbuBapaAtas(ibuBapa, [datukNenek, moyang, buyut, cakawari, cilawagi]);
-            htmlLayout += `<ul><li>${htmlIbuBapaPuncak}<ul>${htmlSemuaTopLevel}</ul></li></ul>`;
-        } else {
-            // KALAU TAKDA IBU BAPA, KELUARKAN DIRI SENDIRI & ADIK BERADIK SEPERTI BIASA
-            htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
-        }
-
-        htmlLayout += `</div>`;
-        document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-        window.autoMuat();   // SELEPAS pokok dilukis
-
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
     }
