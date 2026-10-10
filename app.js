@@ -600,7 +600,20 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        // Fungsi Membina Keturunan Ke Bawah Secara Automatik Ikut Ibu/Bapa Sebenar (ref_id)
+        // 🔥 FIX: FUNGSI BARU UNTUK BINA BUMBUNG IBU BAPA DI PUNCAK CARTA SAHAJA
+        const binaIbuBapaAtas = (senarai, sisa) => {
+            const bapa = senarai.find(lelaki) || senarai[0];
+            const ibu = senarai.find(x => x !== bapa);
+            const bAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
+            const iAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
+            
+            let kelas = 'couple-wrapper main-couple induk-atas has-children';
+            if (ibu) kelas += ' has-spouse';
+            if (bAda && iAda) kelas += ' anc-both';
+            
+            return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, 'ibubapa', true)}${ibu ? binaTiangAtasan(ibu, sisa, 'ibubapa', false) : ''}</div>`;
+        };
+
         const renderKeturunan = (dataSemasa, bakiLevel) => {
             if (Array.isArray(dataSemasa[0])) {
                 let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
@@ -656,8 +669,9 @@ window.bukaPreview = async () => {
             return str;
         };
         
-        let htmlLayout = '<div class="tree"><ul>';
-        let senaraiTopLevel = []; // Kumpul Diri Sendiri & Adik Beradik di paras yang sama
+        // 🔥 FIX: Buang <ul> tetap di sini. Kita akan bina mengikut keperluan (ada bumbung ibu bapa atau tidak)
+        let htmlLayout = '<div class="tree">'; 
+        let senaraiTopLevel = [];
 
         // --- BINA BLOK DIRI SENDIRI (UTAMA) ---
         const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
@@ -683,8 +697,10 @@ window.bukaPreview = async () => {
 
         mainArray.forEach((p) => {
             if (p.is_root) {
-                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
+                // 🔥 FIX: Ibu Bapa DIPISAHKAN dari tiang Diri Sendiri supaya ibu bapa tak dipacak dua kali
+                htmlMain += binaTiangAtasan(p, [], 'diri'); 
             } else {
+                // MERTUA KEKAL dipacak di atas Pasangan (Tidak dikacau langsung!)
                 htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
@@ -699,7 +715,7 @@ window.bukaPreview = async () => {
         adikBeradik.forEach(adik => {
             let tarikhAdik = adik.dob ? new Date(adik.dob) : new Date();
             
-            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id); // Cari ipar yang diikat pada adik-beradik ini
+            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id);
             let anakSini = anakSaudara.filter(c => c.ref_id === adik.id);
             
             let classW = "couple-wrapper sibling-couple" + (anakSini.length > 0 ? " has-children" : "");
@@ -712,7 +728,6 @@ window.bukaPreview = async () => {
             
             let htmlAdik = `<div class="${classW}">${htmlKumpulan}</div>`;
             
-            // Render keturunan adik-beradik menggunakan fungsi dinamik ref_id yang baru!
             if (anakSini.length > 0) {
                 htmlAdik += renderKeturunan([anakSini, cucuSaudara]); 
             }
@@ -721,11 +736,25 @@ window.bukaPreview = async () => {
 
         // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
         senaraiTopLevel.sort((a, b) => a.dob - b.dob);
+        
+        let htmlSemuaTopLevel = '';
         senaraiTopLevel.forEach(item => {
-            htmlLayout += item.html;
+            htmlSemuaTopLevel += item.html;
         });
 
-        htmlLayout += `</ul></div>`;
+        // 🔥 FIX: LUKIS BUMBUNG IBU BAPA (KARIM & MONA) DI PUNCAK, MEMAYUNGI AMINAH & ADIK BERADIKNYA
+        const { senarai: senaraiIbuBapa, sisa: sisaLeluhur } = cariIbuBapa(diriSendiri, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], true);
+
+        if (senaraiIbuBapa.length > 0) {
+            let htmlIbuBapaPuncak = binaIbuBapaAtas(senaraiIbuBapa, sisaLeluhur);
+            // Ibu bapa (Karim & Mona) jadi punca <ul> pertama, Diri Sendiri & Adik-beradik duduk dalam <ul> anak
+            htmlLayout += `<ul><li>${htmlIbuBapaPuncak}<ul>${htmlSemuaTopLevel}</ul></li></ul>`;
+        } else {
+            // Jika tiada ibu bapa, mereka berbaris sebaris macam biasa
+            htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
+        }
+
+        htmlLayout += `</div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
         window.autoMuat();   // SELEPAS pokok dilukis
 
