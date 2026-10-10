@@ -277,14 +277,32 @@
 </head>
 <body>
 
-    <!-- Sesi Log Masuk (Akan disembunyikan bila dah login) -->
-    <div id="welcomeScreen" class="modal-overlay">
-        <div class="modal-box" style="text-align: center;">
-            <h2>Selamat Datang ke <span>myNasab</span></h2>
-            <p style="color: #7f8c8d; margin-bottom: 20px;">Sistem Pintar Salasilah Keluarga Anda.</p>
-            <button onclick="document.getElementById('welcomeScreen').style.display='none'; document.getElementById('authModal').classList.remove('hidden');" class="btn-primary">Mula Sekarang</button>
+    <!-- Skrin Pengenalan myNasab (Onboarding) -->
+<div id="welcomeScreen" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;">
+    <div class="modal-box" style="background: white; border-radius: 20px; text-align: center; max-width: 500px; width: 90%; padding: 40px 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="font-size: 45px; margin-bottom: 15px;">🌳</div>
+        <h2 style="color: #2c3e50; font-size: 26px; font-weight: 800; margin-bottom: 10px;">Selamat Datang ke <span style="color: #27ae60;">myNasab</span></h2>
+        <p style="color: #7f8c8d; margin-bottom: 25px; line-height: 1.6; font-size: 15px;">
+            Sistem pintar untuk merakam salasilah dan legasi keluarga anda. Ikuti 3 langkah mudah ini untuk bermula:
+        </p>
+        
+        <div style="text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e5e7eb;">
+            <p style="margin-bottom: 12px; font-size: 14px; color: #34495e; line-height: 1.5;">
+                <strong style="color: #2c3e50;">1. Mula Dari Induk:</strong> Lengkapkan profil Diri Sendiri, Pasangan, Ibu & Bapa terlebih dahulu.
+            </p>
+            <p style="margin-bottom: 12px; font-size: 14px; color: #34495e; line-height: 1.5;">
+                <strong style="color: #2c3e50;">2. Kembangkan Cabang:</strong> Tambah keturunan ke bawah (Anak, Menantu, Cucu) melalui butang '+ Tambah Ahli'.
+            </p>
+            <p style="margin-bottom: 0; font-size: 14px; color: #34495e; line-height: 1.5;">
+                <strong style="color: #2c3e50;">3. Gabung Keluarga Besar:</strong> Gunakan fungsi 'Jemput Keluarga' untuk memautkan akaun berasingan adik-beradik anda menjadi satu pokok besar.
+            </p>
         </div>
+
+        <button onclick="document.getElementById('welcomeScreen').style.display='none';" style="background: #27ae60; color: white; border: none; padding: 14px 30px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(39,174,96,0.2); transition: all 0.2s;">
+            Faham & Mula Bina Pokok
+        </button>
     </div>
+</div>
 
     <!-- Modal Log Masuk / Daftar -->
     <div id="authModal" class="modal-overlay hidden">
