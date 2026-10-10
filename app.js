@@ -1097,40 +1097,7 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const tarikh = (n) => n && n.dob ? new Date(n.dob).getTime() : Infinity;
         const hiddenList = [];
 
-        // GANTIKAN FUNGSI kelompok() DENGAN INI
-        const kelompok = (nod) => {
-            const k = { 
-                diri: null, pasangan: [], menantu: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []],
-                adikBeradik: [], ipar: [], anakSaudara: [], cucuSaudara: [] // <-- TAMBAHAN UTK MANUAL SIBLINGS
-            };
-            nod.forEach(d => {
-                const h = (d.relationship || '').toLowerCase();
-                if (d.is_root) k.diri = d;
-                else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
-                else if (h.includes('menantu') || h.includes('pasangan cucu')) k.menantu.push(d);
-                else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
-                else if (h.includes('mertua')) k.mertua.push(d);
-                else if (h.includes('datuk') || h.includes('nenek')) k.datukNenek.push(d);
-                else if (h.includes('moyang')) k.moyang.push(d);
-                else if (h.includes('buyut')) k.buyut.push(d);
-                else if (h.includes('cakawari')) k.cakawari.push(d);
-                else if (h.includes('cilawagi')) k.cilawagi.push(d);
-                else if (h === 'anak') k.turun[0].push(d);
-                else if (h === 'cucu') k.turun[1].push(d);
-                else if (h === 'cicit') k.turun[2].push(d);
-                else if (h.includes('piut') || h.includes('cece')) k.turun[3].push(d);
-                else if (h.includes('oneng')) k.turun[4].push(d);
-                // LOGIK KUTIP ADIK BERADIK MANUAL
-                else if (h.includes('adik') || h.includes('abang') || h.includes('kakak') || h === 'adik-beradik') k.adikBeradik.push(d);
-                else if (h.includes('ipar')) k.ipar.push(d);
-                else if (h.includes('anak saudara')) k.anakSaudara.push(d);
-                else if (h.includes('cucu saudara')) k.cucuSaudara.push(d);
-            });
-            return k;
-        };
-
-
-        // SKROL KE BAWAH SIKIT DAN GANTIKAN FUNGSI binaSisi() DENGAN INI
+       // SKROL KE BAWAH SIKIT DAN GANTIKAN FUNGSI binaSisi() DENGAN INI
         const binaSisi = (judul, jangkar, ibuBapa, sisa, sasaranId) => {
             const entri = [{ t: tarikh(jangkar.penentu), html: binaRumah(jangkar.k, jangkar.orang, false) }];
             
