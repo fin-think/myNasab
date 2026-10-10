@@ -48,17 +48,12 @@ if (kodJemput) {
     });
 }
 
-// --- 1. PENGURUSAN SESI ---
+// --- 1. PENGURUSAN SESI (app.js myNasab) ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         penggunaSemasa = user;
-
-        const welcomeElement = document.getElementById('welcomeScreen');
-        if (welcomeElement) welcomeElement.style.display = 'none';
-
-        const authModalElement = document.getElementById('authModal');
-        if (authModalElement) authModalElement.style.display = 'none';
-
+        
+        // Terus papar dashboard jika log masuk berjaya
         const dashboardUtama = document.getElementById('dashboardUtama');
         if (dashboardUtama) dashboardUtama.classList.remove('hidden');
 
@@ -70,12 +65,12 @@ onAuthStateChanged(auth, async (user) => {
             document.getElementById('creditBalance').innerText = dataPengguna.credit_balance;
             document.getElementById('treeNameDisplay').innerText = dataPengguna.name;
             window.muatTurunSalasilah();
-            window.muatMenunggu();   // kad "Menunggu Kelulusan" untuk akaun induk
+            window.muatMenunggu();
         }
     } else {
         penggunaSemasa = null;
-        const dashboardUtama = document.getElementById('dashboardUtama');
-        if (dashboardUtama) dashboardUtama.classList.add('hidden');
+        // JIKA TAK LOG MASUK, TENDANG KELUAR KE PORTAL UTAMA!
+        window.location.href = "https://familipintar.com"; 
     }
 });
 
