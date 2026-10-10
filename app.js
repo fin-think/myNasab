@@ -485,7 +485,7 @@ if (formEdit) {
     });
 }
 
-// --- 7. PREVIEW "KELUARGA SAYA" ---
+// --- 7. PREVIEW "KELUARGA SAYA" (HANYA SUSUR GALUR MENEGAK) ---
 window.bukaPreview = async () => {
     if (!penggunaSemasa) return;
 
@@ -505,9 +505,6 @@ window.bukaPreview = async () => {
         let mertua = [];
         let anakAnak = [], cucu = [], cicit = [], piut = [], oneng = [];
         let menantuKeturunan = [];
-        
-        // TAMBAHAN: Pembolehubah untuk Cabang Sisi (Adik-beradik)
-        let adikBeradik = [], anakSaudara = [], cucuSaudara = [];
 
         const semuaId = new Set(querySnapshot.docs.map(s => s.id));
 
@@ -529,11 +526,8 @@ window.bukaPreview = async () => {
             else if (hub === "cicit") cicit.push(d);
             else if (hub.includes("piut") || hub.includes("cece")) piut.push(d);
             else if (hub.includes("oneng")) oneng.push(d);
-            // TAMBAHAN: Masukkan Ipar sebagai pasangan, dan tapis Adik-beradik, Anak/Cucu Saudara
-            else if (hub.includes("menantu") || hub.includes("pasangan cucu") || hub.includes("ipar")) menantuKeturunan.push(d);
-            else if (hub.includes("adik") || hub.includes("abang") || hub.includes("kakak") || hub === "adik-beradik") adikBeradik.push(d);
-            else if (hub.includes("anak saudara")) anakSaudara.push(d);
-            else if (hub.includes("cucu saudara")) cucuSaudara.push(d);
+            else if (hub.includes("menantu") || hub.includes("pasangan cucu")) menantuKeturunan.push(d);
+            // Adik-beradik/Ipar/Anak Saudara DIABAIKAN sepenuhnya dalam paparan ini
         });
 
         const binaKotak = (ahli, kategory) => {
@@ -600,20 +594,6 @@ window.bukaPreview = async () => {
             return str;
         };
 
-        // 🔥 FIX: FUNGSI BARU UNTUK BINA BUMBUNG IBU BAPA DI PUNCAK CARTA SAHAJA
-        const binaIbuBapaAtas = (senarai, sisa) => {
-            const bapa = senarai.find(lelaki) || senarai[0];
-            const ibu = senarai.find(x => x !== bapa);
-            const bAda = cariIbuBapa(bapa, sisa, true).senarai.length > 0;
-            const iAda = ibu && cariIbuBapa(ibu, sisa, false).senarai.length > 0;
-            
-            let kelas = 'couple-wrapper main-couple induk-atas has-children';
-            if (ibu) kelas += ' has-spouse';
-            if (bAda && iAda) kelas += ' anc-both';
-            
-            return `<div class="${kelas}">${binaTiangAtasan(bapa, sisa, 'ibubapa', true)}${ibu ? binaTiangAtasan(ibu, sisa, 'ibubapa', false) : ''}</div>`;
-        };
-
         const renderKeturunan = (dataSemasa, bakiLevel) => {
             if (Array.isArray(dataSemasa[0])) {
                 let firstLevelIndex = dataSemasa.findIndex(arr => arr.length > 0);
@@ -640,7 +620,6 @@ window.bukaPreview = async () => {
                 if (bakiLevel && bakiLevel.length > 0) {
                     let nextLevelAll = bakiLevel[0];
                     anakKepadaNode = nextLevelAll.filter(child => child.ref_id === node.id);
-                    
                     if (index === 0) {
                         let dataYatim = nextLevelAll.filter(child => !child.ref_id || child.ref_id === "");
                         anakKepadaNode = anakKepadaNode.concat(dataYatim);
@@ -657,23 +636,17 @@ window.bukaPreview = async () => {
                 let htmlKumpulan = '';
                 gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'anak')}</div>`);
                 
-                str += `<li>`;
-                str += `<div class="${classW}">${htmlKumpulan}</div>`;
+                str += `<li><div class="${classW}">${htmlKumpulan}</div>`;
                 if (adaKeturunanBawah) {
                     str += renderKeturunan(anakKepadaNode, bakiGenerasiSeterusnya);
                 }
                 str += `</li>`;
             });
             
-            str += `</ul>`;
-            return str;
+            return str + `</ul>`;
         };
         
-        // 🔥 FIX: Buang <ul> tetap di sini. Kita akan bina mengikut keperluan (ada bumbung ibu bapa atau tidak)
-        let htmlLayout = '<div class="tree">'; 
-        let senaraiTopLevel = [];
-
-        // --- BINA BLOK DIRI SENDIRI (UTAMA) ---
+        let htmlLayout = '<div class="tree"><ul>';
         const senaraiKeturunan = [anakAnak, cucu, cicit, piut, oneng];
         const adaKeturunan = senaraiKeturunan.some(arr => arr.length > 0);
         const adaPasangan = pasangan.length > 0;
@@ -697,10 +670,8 @@ window.bukaPreview = async () => {
 
         mainArray.forEach((p) => {
             if (p.is_root) {
-                // 🔥 FIX: Ibu Bapa DIPISAHKAN dari tiang Diri Sendiri supaya ibu bapa tak dipacak dua kali
-                htmlMain += binaTiangAtasan(p, [], 'diri'); 
+                htmlMain += binaTiangAtasan(p, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], 'diri');
             } else {
-                // MERTUA KEKAL dipacak di atas Pasangan (Tidak dikacau langsung!)
                 htmlMain += binaTiangAtasan(p, [mertua], 'pasangan', p === pasangan[0]);
             }
         });
@@ -708,55 +679,9 @@ window.bukaPreview = async () => {
         htmlMain += `</div>`;
         if (adaKeturunan) htmlMain += renderKeturunan(senaraiKeturunan);
         
-        let tarikhMain = (diriSendiri && diriSendiri.dob) ? new Date(diriSendiri.dob) : new Date('1970-01-01');
-        senaraiTopLevel.push({ dob: tarikhMain, html: `<li>${htmlMain}</li>` });
-
-        // --- BINA BLOK ADIK-BERADIK (CABANG SISI) ---
-        adikBeradik.forEach(adik => {
-            let tarikhAdik = adik.dob ? new Date(adik.dob) : new Date();
-            
-            let iparNodeIni = menantuKeturunan.filter(m => m.ref_id === adik.id);
-            let anakSini = anakSaudara.filter(c => c.ref_id === adik.id);
-            
-            let classW = "couple-wrapper sibling-couple" + (anakSini.length > 0 ? " has-children" : "");
-            if (iparNodeIni.length > 0) classW += " has-spouse";
-            
-            let gabung = [adik, ...iparNodeIni].sort((a,b) => (a.gender === 'L' ? -1 : 1));
-            
-            let htmlKumpulan = '';
-            gabung.forEach(p => htmlKumpulan += `<div class="pillar">${binaKotak(p, 'adik-beradik')}</div>`);
-            
-            let htmlAdik = `<div class="${classW}">${htmlKumpulan}</div>`;
-            
-            if (anakSini.length > 0) {
-                htmlAdik += renderKeturunan([anakSini, cucuSaudara]); 
-            }
-            senaraiTopLevel.push({ dob: tarikhAdik, html: `<li>${htmlAdik}</li>` });
-        });
-
-        // --- SUSUN KESEMUA MENGKUT UMUR (Kiri Tua, Kanan Muda) ---
-        senaraiTopLevel.sort((a, b) => a.dob - b.dob);
-        
-        let htmlSemuaTopLevel = '';
-        senaraiTopLevel.forEach(item => {
-            htmlSemuaTopLevel += item.html;
-        });
-
-        // 🔥 FIX: LUKIS BUMBUNG IBU BAPA (KARIM & MONA) DI PUNCAK, MEMAYUNGI AMINAH & ADIK BERADIKNYA
-        const { senarai: senaraiIbuBapa, sisa: sisaLeluhur } = cariIbuBapa(diriSendiri, [ibuBapa, datukNenek, moyang, buyut, cakawari, cilawagi], true);
-
-        if (senaraiIbuBapa.length > 0) {
-            let htmlIbuBapaPuncak = binaIbuBapaAtas(senaraiIbuBapa, sisaLeluhur);
-            // Ibu bapa (Karim & Mona) jadi punca <ul> pertama, Diri Sendiri & Adik-beradik duduk dalam <ul> anak
-            htmlLayout += `<ul><li>${htmlIbuBapaPuncak}<ul>${htmlSemuaTopLevel}</ul></li></ul>`;
-        } else {
-            // Jika tiada ibu bapa, mereka berbaris sebaris macam biasa
-            htmlLayout += `<ul>${htmlSemuaTopLevel}</ul>`;
-        }
-
-        htmlLayout += `</div>`;
+        htmlLayout += `<li>${htmlMain}</li></ul></div>`;
         document.getElementById('ruangAutoLayout').innerHTML = htmlLayout;
-        window.autoMuat();   // SELEPAS pokok dilukis
+        window.autoMuat();
 
     } catch (error) {
         document.getElementById('ruangAutoLayout').innerHTML = `<p style="color:red;">Gagal menjana visual: ${esc(error.message)}</p>`;
@@ -983,7 +908,10 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const akaun = await Promise.all(pautan.map(async p => ({ uid: p.uid, sasaran: p.sasaran_id, nod: await ambil(p.uid) })));
 
         const kelompok = (nod) => {
-            const k = { diri: null, pasangan: [], menantu: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []] };
+            const k = { 
+                diri: null, pasangan: [], menantu: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []],
+                adikBeradik: [], ipar: [], anakSaudara: [], cucuSaudara: [] // <-- TAMBAHAN UTK MANUAL SIBLINGS
+            };
             nod.forEach(d => {
                 const h = (d.relationship || '').toLowerCase();
                 if (d.is_root) k.diri = d;
@@ -1001,10 +929,15 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                 else if (h === 'cicit') k.turun[2].push(d);
                 else if (h.includes('piut') || h.includes('cece')) k.turun[3].push(d);
                 else if (h.includes('oneng')) k.turun[4].push(d);
+                // LOGIK KUTIP ADIK BERADIK MANUAL
+                else if (h.includes('adik') || h.includes('abang') || h.includes('kakak') || h === 'adik-beradik') k.adikBeradik.push(d);
+                else if (h.includes('ipar')) k.ipar.push(d);
+                else if (h.includes('anak saudara')) k.anakSaudara.push(d);
+                else if (h.includes('cucu saudara')) k.cucuSaudara.push(d);
             });
             return k;
         };
-
+        
         const k0 = kelompok(nodInduk);
         if (!k0.diri) { 
             ruang.innerHTML = '<p>Data akaun induk tidak dijumpai.</p>'; 
@@ -1164,9 +1097,44 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
         const tarikh = (n) => n && n.dob ? new Date(n.dob).getTime() : Infinity;
         const hiddenList = [];
 
+        // GANTIKAN FUNGSI kelompok() DENGAN INI
+        const kelompok = (nod) => {
+            const k = { 
+                diri: null, pasangan: [], menantu: [], ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [], turun: [[], [], [], [], []],
+                adikBeradik: [], ipar: [], anakSaudara: [], cucuSaudara: [] // <-- TAMBAHAN UTK MANUAL SIBLINGS
+            };
+            nod.forEach(d => {
+                const h = (d.relationship || '').toLowerCase();
+                if (d.is_root) k.diri = d;
+                else if (h.includes('suami') || h.includes('isteri')) k.pasangan.push(d);
+                else if (h.includes('menantu') || h.includes('pasangan cucu')) k.menantu.push(d);
+                else if (h === 'ayah' || h === 'ibu') k.ibuBapa.push(d);
+                else if (h.includes('mertua')) k.mertua.push(d);
+                else if (h.includes('datuk') || h.includes('nenek')) k.datukNenek.push(d);
+                else if (h.includes('moyang')) k.moyang.push(d);
+                else if (h.includes('buyut')) k.buyut.push(d);
+                else if (h.includes('cakawari')) k.cakawari.push(d);
+                else if (h.includes('cilawagi')) k.cilawagi.push(d);
+                else if (h === 'anak') k.turun[0].push(d);
+                else if (h === 'cucu') k.turun[1].push(d);
+                else if (h === 'cicit') k.turun[2].push(d);
+                else if (h.includes('piut') || h.includes('cece')) k.turun[3].push(d);
+                else if (h.includes('oneng')) k.turun[4].push(d);
+                // LOGIK KUTIP ADIK BERADIK MANUAL
+                else if (h.includes('adik') || h.includes('abang') || h.includes('kakak') || h === 'adik-beradik') k.adikBeradik.push(d);
+                else if (h.includes('ipar')) k.ipar.push(d);
+                else if (h.includes('anak saudara')) k.anakSaudara.push(d);
+                else if (h.includes('cucu saudara')) k.cucuSaudara.push(d);
+            });
+            return k;
+        };
+
+
+        // SKROL KE BAWAH SIKIT DAN GANTIKAN FUNGSI binaSisi() DENGAN INI
         const binaSisi = (judul, jangkar, ibuBapa, sisa, sasaranId) => {
             const entri = [{ t: tarikh(jangkar.penentu), html: binaRumah(jangkar.k, jangkar.orang, false) }];
             
+            // 1. Adik Beradik dari Pautan (Akaun Luar)
             akaun.filter(a => a.sasaran === sasaranId).forEach(a => {
                 const k = kelompok(a.nod);
                 if (!k.diri) return;
@@ -1179,6 +1147,26 @@ window.bukaPreviewBesar = async (mod = 'semua') => {
                 let susunanOrang = susunKiri([k.diri, ...k.pasangan]);
                 entri.push({ t: tarikh(k.diri), html: binaRumah(k, susunanOrang, a.uid !== saya) });
             });
+
+            // 2. Adik Beradik Manual (Ditambah dalam akaun sendiri)
+            if (jangkar.k.adikBeradik && jangkar.k.adikBeradik.length > 0) {
+                jangkar.k.adikBeradik.forEach(adik => {
+                    // Bina 'kelompok' buatan khas untuk adik beradik manual ini
+                    const kAdik = {
+                        diri: adik,
+                        pasangan: jangkar.k.ipar.filter(i => i.ref_id === adik.id),
+                        menantu: jangkar.k.ipar, 
+                        ibuBapa: [], datukNenek: [], moyang: [], buyut: [], cakawari: [], cilawagi: [], mertua: [],
+                        turun: [
+                            jangkar.k.anakSaudara.filter(c => c.ref_id === adik.id), // Letak di slot Anak
+                            jangkar.k.cucuSaudara, // Slot Cucu
+                            [], [], []
+                        ]
+                    };
+                    let susunanOrang = susunKiri([kAdik.diri, ...kAdik.pasangan]);
+                    entri.push({ t: tarikh(kAdik.diri), html: binaRumah(kAdik, susunanOrang, false) });
+                });
+            }
             
             entri.sort((x, y) => x.t - y.t);
 
